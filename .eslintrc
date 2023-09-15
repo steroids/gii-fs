@@ -1,0 +1,27 @@
+{
+    "extends": [
+        "@steroidsjs/eslint-config"
+    ],
+    "rules": {
+        "import/prefer-default-export": "off",
+        "no-useless-constructor": "off",
+        "class-methods-use-this": "off",
+        "no-await-in-loop": "off",
+        "no-restricted-syntax": "off",
+        "no-continue": "off",
+        "no-case-declarations": "off",
+        "no-dupe-class-members": "off",
+        "no-redeclare": "off",
+        "max-len": [
+            "error",
+            {
+                "code": 150,
+                "tabWidth": 4
+            }
+        ]
+    },
+    "env": {
+        "node": true
+    },
+    "ignorePatterns": ["src/**/migrations/*.ts"]
+}
