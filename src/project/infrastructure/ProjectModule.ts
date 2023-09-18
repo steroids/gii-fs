@@ -16,7 +16,7 @@ import {ProjectEnumService} from '../usecases/services/ProjectEnumService';
     providers: [
         ModuleHelper.provide(ProjectService, [ConfigService]),
         ModuleHelper.provide(ProjectModelService, []),
-        ModuleHelper.provide(ProjectEnumService, []),
+        ModuleHelper.provide(ProjectEnumService, [ProjectService]),
     ]
 })
 export class ProjectModule {}

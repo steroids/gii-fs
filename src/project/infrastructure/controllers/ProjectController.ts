@@ -57,11 +57,13 @@ export class ProjectController {
         return this.enumService.getEnumInfo(id);
     }
 
-    @Post('/enum')
+    @Post('project/:projectName/module/:moduleName/enum')
     async createEnum(
-        @Body() dto: ProjectEnumModel,
+        @Param('projectName') projectName: string,
+        @Param('moduleName') moduleName: string,
+        @Body() dto: EnumSaveDto,
     ) {
-        return;
+        return this.enumService.createEnum(projectName, moduleName, dto);
     }
 
     @Post('/enum/:id')

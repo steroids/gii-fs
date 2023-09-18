@@ -49,7 +49,7 @@ export class ProjectService {
         return module;
     }
 
-    private getProjectModulesPaths(projectPath: string): string[] {
+    private getProjectModules(projectPath: string): Array<{name: string, path: string}> {
         const result = [];
         const srcPath = path.resolve(projectPath, 'src');
         const srcContent = fs.readdirSync(srcPath, {withFileTypes: true});
@@ -57,12 +57,15 @@ export class ProjectService {
         for (const srcDirectory of srcDirectories) {
             const moduleDirectory = path.resolve(srcPath, srcDirectory.name);
             try {
-                const isModuleDirectory = fs.readdirSync(
+                const moduleFile = fs.readdirSync(
                     path.resolve(moduleDirectory, 'infrastructure'),
                     {withFileTypes: true},
-                ).some(item => item.name.includes('Module') && item.isFile());
-                if (isModuleDirectory) {
-                    result.push(moduleDirectory);
+                ).find(item => item.name.includes('Module') && item.isFile());
+                if (moduleFile) {
+                    result.push({
+                        path: moduleDirectory,
+                        name: moduleFile.name.replace('.ts', ''),
+                    });
                 }
             } catch (e) {}
         }
@@ -76,9 +79,9 @@ export class ProjectService {
         project.name = packageInfo.name;
         project.modules = [];
 
-        const modulesPaths = this.getProjectModulesPaths(projectPath);
-        for (const modulePath of modulesPaths) {
-            project.modules.push(this.parseModule(modulePath));
+        const modulesPaths = this.getProjectModules(projectPath);
+        for (const module of modulesPaths) {
+            project.modules.push(this.parseModule(module.path));
         }
 
         return project;
@@ -102,4 +105,18 @@ export class ProjectService {
 
         return projects;
     }
-}
+
+    public getProjectPathByName(projectName: string) {
+        const projectsConfig: IConfig = JSON.parse(fs.readFileSync(this.configService.get('project.configRoute')).toString());
+        return projectsConfig.projects.find(projectPath => {
+            const packageInfo = JSON.parse(fs.readFileSync(path.resolve(projectPath, 'package.json')).toString());
+            return packageInfo.name === projectName;
+        });
+    }
+
+    public getModulePathByName(projectName: string, moduleName: string) {
+        const projectPath = this.getProjectPathByName(projectName);
+        const modules = this.getProjectModules(projectPath);
+        return modules.find(module => module.name === moduleName)?.path;
+    }
+ }

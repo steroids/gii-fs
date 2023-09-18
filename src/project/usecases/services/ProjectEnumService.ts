@@ -1,15 +1,19 @@
 import {DataMapper} from '@steroidsjs/nest/usecases/helpers/DataMapper';
 import * as fs from 'fs';
 import * as ts from 'typescript';
+import * as path from 'path';
+import {SyntaxKind} from 'typescript';
 import {EnumScheme} from '../../infrastructure/schemes/EnumScheme';
 import {ProjectEnumModel} from '../../domain/models/ProjectEnumModel';
 import {ProjectEnumFieldModel} from '../../domain/models/ProjectEnumFieldModel';
-import {SyntaxKind} from 'typescript';
 import {tab, updateFileContent} from '../helpers';
 import {EnumSaveDto} from '../dtos/EnumSaveDto';
+import {ProjectService} from './ProjectService';
 
 export class ProjectEnumService {
-    constructor() {}
+    constructor(
+        private projectService: ProjectService,
+    ) {}
 
     public getEnumInfo(id: string) {
         const enumModel = this.parseEnum(id);
@@ -175,6 +179,31 @@ export class ProjectEnumService {
         // Обновляем содержимое файла
         fs.writeFileSync(dto.id, fileContent);
 
-        return fileContent;
+        return this.parseEnum(dto.id);
+    }
+
+    public createEnum(projectName: string, moduleName: string, dto: EnumSaveDto) {
+        const ENUM_NAME_KEY = '%enumName%';
+        const PROPERTIES_DECLARATIONS_KEY = '%propertiesDeclarations%';
+        const LABELS_DECLARATIONS_KEY = '%labelsDeclarations%';
+
+        const modulePath = this.projectService.getModulePathByName(projectName, moduleName);
+
+        const enumsPath = path.resolve(modulePath, 'domain', 'enums');
+        if (!fs.existsSync(enumsPath)) {
+            fs.mkdirSync(enumsPath);
+        }
+
+        const filename = path.resolve(enumsPath, `${dto.name}.ts`);
+
+        const templatePath = path.resolve(__dirname,  '../../../../public/templates/EnumTemplate.txt');
+
+        let resultFileContent = fs.readFileSync(templatePath, 'utf-8').toString();
+
+        resultFileContent = resultFileContent.replace(ENUM_NAME_KEY, dto.name);
+        resultFileContent = resultFileContent.replace(PROPERTIES_DECLARATIONS_KEY, 'test');
+        resultFileContent = resultFileContent.replace(LABELS_DECLARATIONS_KEY, 'test');
+
+        fs.writeFileSync(filename, resultFileContent);
     }
 }
