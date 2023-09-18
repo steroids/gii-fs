@@ -1,6 +1,6 @@
 import {StringField} from '@steroidsjs/nest/infrastructure/decorators/fields';
 
-export class EnumFieldDto {
+export class ProjectEnumFieldModel {
     @StringField()
     id: string;
 

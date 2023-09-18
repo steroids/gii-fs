@@ -1,8 +1,9 @@
 import {Body, Controller, Get, Inject, Param, Post} from '@nestjs/common';
-import {ApiTags} from '@nestjs/swagger';
-import {ModelDto} from '../../usecases/dtos/ModelDto';
-import {EnumDto} from '../../usecases/dtos/EnumDto';
+import {ApiOkResponse, ApiTags} from '@nestjs/swagger';
+import {ProjectModelModel} from '../../domain/models/ProjectModelModel';
+import {ProjectEnumModel} from '../../domain/models/ProjectEnumModel';
 import {ProjectService} from '../../usecases/services/ProjectService';
+import {ProjectScheme} from '../schemes/ProjectScheme';
 
 @ApiTags('Информация о проекте')
 @Controller()
@@ -13,6 +14,7 @@ export class ProjectController {
     ) {}
 
     @Get('/projects')
+    @ApiOkResponse({type: ProjectScheme, isArray: true})
     async getProjects() {
         return this.projectService.getProjects();
     }
@@ -21,13 +23,13 @@ export class ProjectController {
     async getModel(
         @Param('id') id: string,
     ) {
-        return;
+        return this.projectService.getModelInfo(id);
     }
 
     @Post('/model/:id')
     async saveModel(
         @Param('id') id: string,
-        @Body() dto: ModelDto,
+        @Body() dto: ProjectModelModel,
     ) {
         return;
     }
@@ -36,13 +38,13 @@ export class ProjectController {
     async getEnum(
         @Param('id') id: string,
     ) {
-        return;
+        return this.projectService.getEnumInfo(id);
     }
 
     @Post('/enum/:id')
     async saveEnum(
         @Param('id') id: string,
-        @Body() dto: EnumDto,
+        @Body() dto: ProjectEnumModel,
     ) {
         return;
     }

@@ -4,9 +4,9 @@ import {
     RelationField,
     StringField
 } from '@steroidsjs/nest/infrastructure/decorators/fields';
-import {RelationDto} from './RelationDto';
+import {ProjectRelationModel} from './ProjectRelationModel';
 
-export class ModelFieldDto {
+export class ProjectModelFieldModel {
     @StringField()
     name: string;
 
@@ -21,9 +21,9 @@ export class ModelFieldDto {
 
     @RelationField({
         type: 'ManyToOne',
-        relationClass: () => RelationDto,
+        relationClass: () => ProjectRelationModel,
     })
-    relationDto: RelationDto;
+    relation: ProjectRelationModel;
 
     @BooleanField({nullable: true})
     isPrimaryKey?: boolean;

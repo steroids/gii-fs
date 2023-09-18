@@ -1,14 +1,14 @@
 import {RelationField, StringField} from '@steroidsjs/nest/infrastructure/decorators/fields';
-import {ModelFieldDto} from './ModelFieldDto';
+import {ProjectModuleModel} from './ProjectModuleModel';
 
-export class ModelDto {
+export class ProjectModel {
     @StringField()
     name: string;
 
     @RelationField({
         type: 'ManyToMany',
         isOwningSide: true,
-        relationClass: () => ModelFieldDto,
+        relationClass: () => ProjectModuleModel,
     })
-    fields: ModelFieldDto[];
+    modules: ProjectModuleModel[];
 }

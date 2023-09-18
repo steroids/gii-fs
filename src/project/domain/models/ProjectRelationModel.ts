@@ -1,6 +1,6 @@
 import {BooleanField, StringField} from '@steroidsjs/nest/infrastructure/decorators/fields';
 
-export class RelationDto {
+export class ProjectRelationModel {
     @StringField()
     type: string;
 

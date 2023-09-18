@@ -6,14 +6,16 @@ import {DataMapper} from '@steroidsjs/nest/usecases/helpers/DataMapper';
 import {SyntaxKind} from 'typescript';
 import {UserException} from '@steroidsjs/nest/usecases/exceptions';
 import {IConfig} from '../interfaces/IConfig';
-import {ProjectDto} from '../dtos/ProjectDto';
-import {ModuleDto} from '../dtos/ModuleDto';
-import {ModelDto} from '../dtos/ModelDto';
-import {EnumDto} from '../dtos/EnumDto';
-import {EnumFieldDto} from '../dtos/EnumFieldDto';
-import {ModelFieldDto} from '../dtos/ModelFieldDto';
+import {ProjectModelModel} from '../../domain/models/ProjectModelModel';
+import {ProjectEnumModel} from '../../domain/models/ProjectEnumModel';
+import {ProjectEnumFieldModel} from '../../domain/models/ProjectEnumFieldModel';
+import {ProjectModelFieldModel} from '../../domain/models/ProjectModelFieldModel';
 import {SteroidsFieldsEnum} from '../../domain/enums/SteroidsFieldsEnum';
-import {RelationDto} from '../dtos/RelationDto';
+import {ProjectRelationModel} from '../../domain/models/ProjectRelationModel';
+import {ProjectScheme} from '../../infrastructure/schemes/ProjectScheme';
+import {ModuleScheme} from '../../infrastructure/schemes/ModuleScheme';
+import {ModelScheme} from '../../infrastructure/schemes/ModelScheme';
+import {EnumScheme} from '../../infrastructure/schemes/EnumScheme';
 
 export class ProjectService {
     private configRoute: string;
@@ -23,7 +25,17 @@ export class ProjectService {
         this.configRoute = configService.get('project.configRoute');
     }
 
-    private parseModelField(tsMember: any, modelName: string): ModelFieldDto | null {
+    public getModelInfo(id: string) {
+        const model = this.parseModel(id);
+        return DataMapper.create(ModelScheme, model);
+    }
+
+    public getEnumInfo(id: string) {
+        const enumModel = this.parseEnum(id);
+        return DataMapper.create(EnumScheme, enumModel);
+    }
+
+    private parseModelField(tsMember: any, modelName: string): ProjectModelFieldModel | null {
         const fieldDecorator = tsMember.decorators?.find(decorator => decorator.expression.expression.escapedText.includes('Field'))
         if (!fieldDecorator) {
             return null;
@@ -64,7 +76,7 @@ export class ProjectService {
             property.name.escapedText === propertyName
         ))?.initializer)
 
-        const fieldDto = new ModelFieldDto();
+        const fieldDto = new ProjectModelFieldModel();
         fieldDto.name = tsMember.name.escapedText;
         fieldDto.type = fieldDecorator.expression.expression.escapedText;
 
@@ -75,7 +87,7 @@ export class ProjectService {
         fieldDto.isRequired = findPropertyValue('required');
 
         if (fieldDto.type === SteroidsFieldsEnum.RELATION_FIELD) {
-            fieldDto.relationDto = DataMapper.create<RelationDto>(RelationDto, {
+            fieldDto.relation = DataMapper.create<ProjectRelationModel>(ProjectRelationModel, {
                 type: findPropertyValue('type'),
                 modelId: findPropertyValue('relationClass'),
                 isOwningSide: findPropertyValue('isOwningSide'),
@@ -86,7 +98,7 @@ export class ProjectService {
         return fieldDto;
     }
 
-    private parseModel(modelPath: string): ModelDto {
+    private parseModel(modelPath: string): ProjectModelModel {
         let fileContent = fs.readFileSync(modelPath).toString();
         const ast: any = ts.createSourceFile(
             'thisFileWillNotBeCreated.ts',
@@ -94,7 +106,7 @@ export class ProjectService {
             ts.ScriptTarget.Latest
         ).statements;
 
-        const model = new ModelDto();
+        const model = new ProjectModelModel();
         model.fields = [];
 
         const modelNode = ast.find(node => node.name?.escapedText?.includes('Model'));
@@ -110,7 +122,7 @@ export class ProjectService {
         return model;
     }
 
-    private parseEnum(enumPath: string): EnumDto {
+    private parseEnum(enumPath: string): ProjectEnumModel {
         let fileContent = fs.readFileSync(enumPath).toString();
         const ast: any = ts.createSourceFile(
             'thisFileWillNotBeCreated.ts',
@@ -118,7 +130,7 @@ export class ProjectService {
             ts.ScriptTarget.Latest
         ).statements;
 
-        const enumDto = new EnumDto();
+        const enumDto = new ProjectEnumModel();
         enumDto.fields = [];
 
         const enumNode = ast.find(node => node.name?.escapedText?.includes('Enum'));
@@ -129,7 +141,7 @@ export class ProjectService {
             if (!member.name.escapedText || member.parameters) {
                 continue;
             }
-            const fieldDto = new EnumFieldDto();
+            const fieldDto = new ProjectEnumFieldModel();
             fieldDto.id = member.name.escapedText;
 
             const labelProperty = labelsFunction.body.statements[0].expression.properties.find(property => (
@@ -144,15 +156,14 @@ export class ProjectService {
         return enumDto;
     }
 
-    private parseModule(modulePath: string): ModuleDto {
+    private parseModule(modulePath: string): ModuleScheme {
         const moduleFile = fs.readdirSync(
             path.resolve(modulePath, 'infrastructure'),
             {withFileTypes: true},
         ).find(item => item.name.includes('Module') && item.isFile());
 
-        const module = new ModuleDto();
-        module.enums = [];
-        module.models = [];
+        const module = new ModuleScheme();
+
         module.name = moduleFile.name.replace('.ts', '');
 
         try {
@@ -160,9 +171,10 @@ export class ProjectService {
             const modelFiles = fs.readdirSync(modelsPath, {withFileTypes: true})
                 .filter(item => item.name.includes('Model') && item.isFile());
 
-            for (const modelFile of modelFiles) {
-                module.models.push(this.parseModel(path.resolve(modelsPath, modelFile.name)));
-            }
+            module.models = modelFiles.map(modelFile => ({
+                id: path.resolve(modelsPath, modelFile.name),
+                name: modelFile.name.replace('.ts', ''),
+            }));
         } catch (e) {}
 
         try {
@@ -170,21 +182,17 @@ export class ProjectService {
             const enumFiles = fs.readdirSync(enumsPath, {withFileTypes: true})
                 .filter(item => item.name.includes('Enum') && item.isFile());
 
-            for (const enumFile of enumFiles) {
-                module.enums.push(this.parseEnum(path.resolve(enumsPath, enumFile.name)));
-            }
+            module.enums = enumFiles.map(enumFile => ({
+                id: path.resolve(enumsPath, enumFile.name),
+                name: enumFile.name.replace('.ts', ''),
+            }));
         } catch (e) {}
 
         return module;
     }
 
-    private parseProject(projectPath: string): ProjectDto {
-        const packageInfo = JSON.parse(fs.readFileSync(path.resolve(projectPath, 'package.json')).toString());
-
-        const project = new ProjectDto();
-        project.name = packageInfo.name;
-        project.modules = [];
-
+    private getProjectModulesPaths(projectPath: string): string[] {
+        const result = [];
         const srcPath = path.resolve(projectPath, 'src');
         const srcContent = fs.readdirSync(srcPath, {withFileTypes: true});
         const srcDirectories = srcContent.filter(item => item.isDirectory());
@@ -196,15 +204,29 @@ export class ProjectService {
                     {withFileTypes: true},
                 ).some(item => item.name.includes('Module') && item.isFile());
                 if (isModuleDirectory) {
-                    project.modules.push(this.parseModule(moduleDirectory));
+                    result.push(moduleDirectory);
                 }
             } catch (e) {}
+        }
+        return result;
+    }
+
+    private parseProject(projectPath: string): ProjectScheme {
+        const packageInfo = JSON.parse(fs.readFileSync(path.resolve(projectPath, 'package.json')).toString());
+
+        const project = new ProjectScheme();
+        project.name = packageInfo.name;
+        project.modules = [];
+
+        const modulesPaths = this.getProjectModulesPaths(projectPath);
+        for (const modulePath of modulesPaths) {
+            project.modules.push(this.parseModule(modulePath));
         }
 
         return project;
     }
 
-    public async getProjects(): Promise<ProjectDto[]> {
+    public async getProjects(): Promise<ProjectScheme[]> {
         const projects = [];
         try {
             const projectsConfig: IConfig = JSON.parse(fs.readFileSync(this.configRoute).toString());
