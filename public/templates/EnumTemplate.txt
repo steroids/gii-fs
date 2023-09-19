@@ -2,7 +2,6 @@ import BaseEnum from '@steroidsjs/nest/domain/base/BaseEnum';
 
 export class %enumName% extends BaseEnum {
 %propertiesDeclarations%
-
     static getLabels() {
         return {
 %labelsDeclarations%

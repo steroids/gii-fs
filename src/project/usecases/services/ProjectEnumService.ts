@@ -200,9 +200,20 @@ export class ProjectEnumService {
 
         let resultFileContent = fs.readFileSync(templatePath, 'utf-8').toString();
 
+        let propertiesDeclarations = '';
+        let labelsDeclarations = '';
+        for (const [index, field] of dto.fields.entries()) {
+            propertiesDeclarations += `${tab()}static ${field.id} = '${field.id.toLowerCase()}';\n`;
+            labelsDeclarations += `${tab(3)}[this.${field.id}]: '${field.label}',`;
+            if (index !== dto.fields.length - 1) {
+                propertiesDeclarations += '\n';
+                labelsDeclarations += '\n';
+            }
+        }
+
         resultFileContent = resultFileContent.replace(ENUM_NAME_KEY, dto.name);
-        resultFileContent = resultFileContent.replace(PROPERTIES_DECLARATIONS_KEY, 'test');
-        resultFileContent = resultFileContent.replace(LABELS_DECLARATIONS_KEY, 'test');
+        resultFileContent = resultFileContent.replace(PROPERTIES_DECLARATIONS_KEY, propertiesDeclarations);
+        resultFileContent = resultFileContent.replace(LABELS_DECLARATIONS_KEY, labelsDeclarations);
 
         fs.writeFileSync(filename, resultFileContent);
     }
