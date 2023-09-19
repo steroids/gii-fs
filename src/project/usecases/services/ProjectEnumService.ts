@@ -10,6 +10,8 @@ import {tab, updateFileContent} from '../helpers';
 import {EnumSaveDto} from '../dtos/EnumSaveDto';
 import {ProjectService} from './ProjectService';
 
+const LABELS_FUNCTION_NAME = 'getLabels';
+
 export class ProjectEnumService {
     constructor(
         private projectService: ProjectService,
@@ -31,10 +33,10 @@ export class ProjectEnumService {
         const enumDto = new ProjectEnumModel();
         enumDto.fields = [];
 
-        const enumNode = ast.find(node => node.name?.escapedText?.includes('Enum'));
+        const enumNode = ast.find(node => node.kind === SyntaxKind.ClassDeclaration);
         enumDto.name = enumNode.name?.escapedText;
 
-        const labelsFunction = enumNode.members.find(member => member.name.escapedText === 'getLabels');
+        const labelsFunction = enumNode.members.find(member => member.name.escapedText === LABELS_FUNCTION_NAME);
         for (const member of enumNode.members) {
             if (!member.name.escapedText || member.parameters) {
                 continue;
@@ -70,7 +72,7 @@ export class ProjectEnumService {
             ).statements;
             classNode = ast.find(node => node.kind === SyntaxKind.ClassDeclaration);
             labelsFunction = classNode.members.find(member => (
-                member.kind === SyntaxKind.MethodDeclaration && member.name.escapedText === 'getLabels'
+                member.kind === SyntaxKind.MethodDeclaration && member.name.escapedText === LABELS_FUNCTION_NAME
             ));
         };
 
@@ -216,5 +218,7 @@ export class ProjectEnumService {
         resultFileContent = resultFileContent.replace(LABELS_DECLARATIONS_KEY, labelsDeclarations);
 
         fs.writeFileSync(filename, resultFileContent);
+
+        return this.parseEnum(filename);
     }
 }
