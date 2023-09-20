@@ -1,12 +1,13 @@
 import {Body, Controller, Get, Inject, Param, Post} from '@nestjs/common';
 import {ApiOkResponse, ApiTags} from '@nestjs/swagger';
-import {ProjectModelModel} from '../../domain/models/ProjectModelModel';
-import {ProjectEnumModel} from '../../domain/models/ProjectEnumModel';
 import {ProjectService} from '../../usecases/services/ProjectService';
 import {ProjectScheme} from '../schemes/ProjectScheme';
 import {ProjectModelService} from '../../usecases/services/ProjectModelService';
 import {ProjectEnumService} from '../../usecases/services/ProjectEnumService';
 import {EnumSaveDto} from '../../usecases/dtos/EnumSaveDto';
+import {ModelSaveDto} from '../../usecases/dtos/ModelSaveDto';
+import {ModelScheme} from '../schemes/ModelScheme';
+import {EnumScheme} from '../schemes/EnumScheme';
 
 @ApiTags('Информация о проекте')
 @Controller()
@@ -29,28 +30,35 @@ export class ProjectController {
     }
 
     @Get('/model/:id')
+    @ApiOkResponse({type: ModelScheme, isArray: true})
     async getModel(
         @Param('id') id: string,
     ) {
         return this.modelService.getModelInfo(id);
     }
 
-    @Post('/model')
+    @Post('project/:projectName/module/:moduleName/model')
+    @ApiOkResponse({type: ModelScheme, isArray: true})
     async createModel(
-        @Body() dto: ProjectModelModel,
+        @Param('projectName') projectName: string,
+        @Param('moduleName') moduleName: string,
+        @Body() dto: ModelSaveDto,
     ) {
-        return;
+        return this.modelService.createModel(projectName, moduleName, dto);
     }
 
     @Post('/model/:id')
+    @ApiOkResponse({type: ModelScheme, isArray: true})
     async updateModel(
         @Param('id') id: string,
-        @Body() dto: ProjectModelModel,
+        @Body() dto: ModelSaveDto,
     ) {
-        return;
+        dto.id = id;
+        return this.modelService.updateModel(dto);
     }
 
     @Get('/enum/:id')
+    @ApiOkResponse({type: EnumScheme, isArray: true})
     async getEnum(
         @Param('id') id: string,
     ) {
@@ -58,6 +66,7 @@ export class ProjectController {
     }
 
     @Post('project/:projectName/module/:moduleName/enum')
+    @ApiOkResponse({type: EnumScheme, isArray: true})
     async createEnum(
         @Param('projectName') projectName: string,
         @Param('moduleName') moduleName: string,
@@ -67,6 +76,7 @@ export class ProjectController {
     }
 
     @Post('/enum/:id')
+    @ApiOkResponse({type: EnumScheme, isArray: true})
     async updateEnum(
         @Param('id') id: string,
         @Body() dto: EnumSaveDto,

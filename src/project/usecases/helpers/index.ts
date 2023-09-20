@@ -30,3 +30,16 @@ export function updateFileContent(fileContent, fragmentsToUpdate: IFragmentToUpd
     }
     return fileContent;
 }
+
+export function clearObject(object: Object): any {
+    for (const field in object) {
+        if (typeof object[field] === 'object' && !Array.isArray(object[field])) {
+            object[field] = clearObject(object[field]);
+        }
+        if (typeof object[field] === 'undefined') {
+            delete object[field];
+        }
+    }
+
+    return object;
+}

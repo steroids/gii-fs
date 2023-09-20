@@ -1,10 +1,14 @@
 import {ConfigService} from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
+import {uniq as _uniq} from 'lodash';
+import * as ts from 'typescript';
+import {SyntaxKind} from 'typescript';
 import {UserException} from '@steroidsjs/nest/usecases/exceptions';
 import {IConfig} from '../interfaces/IConfig';
 import {ProjectScheme} from '../../infrastructure/schemes/ProjectScheme';
 import {ModuleScheme} from '../../infrastructure/schemes/ModuleScheme';
+import {tab, updateFileContent} from '../helpers';
 
 export class ProjectService {
     private configRoute: string;
@@ -118,5 +122,134 @@ export class ProjectService {
         const projectPath = this.getProjectPathByName(projectName);
         const modules = this.getProjectModules(projectPath);
         return modules.find(module => module.name === moduleName)?.path;
+    }
+
+    public getEntityIdByName(projectName: string, entityName: string) {
+        const projectPath = this.getProjectPathByName(projectName);
+        const project = this.parseProject(projectPath);
+        const projectEntities = project.modules.map(module => [
+            ...(module.enums || []),
+            ...(module.models || []),
+        ]).flat();
+
+        const entity = projectEntities.find(entity => entity.name === entityName);
+
+        return entity?.id;
+    }
+
+    public getProjectNameByEntityPath(entityPath: string) {
+        const projectsConfig: IConfig = JSON.parse(fs.readFileSync(this.configService.get('project.configRoute')).toString());
+        for (const projectPath of projectsConfig.projects) {
+            if (entityPath.includes(projectPath)) {
+                const packageInfo = JSON.parse(fs.readFileSync(path.resolve(projectPath, 'package.json')).toString());
+                return packageInfo.name;
+            }
+        }
+        return null;
+    }
+
+    public getEntityNameByPath(entityPath: string) {
+        let fileContent = fs.readFileSync(entityPath).toString();
+        const ast: any = ts.createSourceFile(
+            'thisFileWillNotBeCreated.ts',
+            fileContent,
+            ts.ScriptTarget.Latest
+        ).statements;
+
+        return ast.find(node => node.kind === SyntaxKind.ClassDeclaration)?.name?.escapedText;
+    }
+
+    public updateFileImports(filePath: string, toImport: {projectEntities: Array<string>, steroidsFields: Array<string>}) {
+        const STEROIDS_FIELDS_IMPORT = '@steroidsjs/nest/infrastructure/decorators/fields';
+
+        let fileContent = fs.readFileSync(filePath).toString();
+        const projectName = this.getProjectNameByEntityPath(filePath);
+
+        let ast: any;
+
+        const updateAst = () => {
+            ast = ts.createSourceFile(
+                `thisFileWillNotBeCreated${Date.now()}.ts`,
+                fileContent,
+                ts.ScriptTarget.Latest
+            ).statements;
+        };
+
+        updateAst();
+
+        const oldSteroidsFields = [];
+        const oldProjectImports = [];
+
+        // Собираем уже существующие импорты и удаляем отдельные импорты steroids fields
+        const importStatements = ast.filter(statement => statement.kind === SyntaxKind.ImportDeclaration);
+        const toRemove = [];
+        for (const importStatement of importStatements) {
+            const moduleSpecifier = importStatement.moduleSpecifier?.text;
+            if (moduleSpecifier?.includes(STEROIDS_FIELDS_IMPORT)) {
+                oldSteroidsFields.push(
+                    ...(importStatement.importClause?.namedBindings?.elements.map(element => element.name.escapedText)),
+                );
+                if (moduleSpecifier.length > STEROIDS_FIELDS_IMPORT.length) {
+                    toRemove.push({start: importStatement.pos - 1, end: importStatement.end, replacement: ''});
+                }
+            }
+            if (moduleSpecifier?.startsWith('.')) {
+                if (importStatement.importClause?.namedBindings?.elements?.length) {
+                    oldProjectImports.push(...(importStatement.importClause?.namedBindings?.elements.map(element => (
+                        this.getEntityIdByName(projectName, element.name.escapedText)
+                    ))));
+                }
+                if (moduleSpecifier?.escapedText) {
+                    oldProjectImports.push(
+                        this.getEntityIdByName(projectName, importStatement.importClause?.name?.escapedText)
+                    );
+                }
+            }
+        }
+        fileContent = updateFileContent(fileContent, toRemove);
+        updateAst();
+
+        const steroidsFields = _uniq([
+            ...oldSteroidsFields,
+            ...(toImport.steroidsFields || []),
+        ]);
+
+        const steroidsFieldsImport = importStatements.find(importStatement => (
+            importStatement.moduleSpecifier?.text === STEROIDS_FIELDS_IMPORT
+        ));
+
+        const steroidsImportCode = `import {\n${tab()}${steroidsFields.join(`,\n${tab()}`)},\n} from '${STEROIDS_FIELDS_IMPORT}';`
+        fileContent = updateFileContent(fileContent, {
+            start: steroidsFieldsImport?.pos - 1 || 0,
+            end: steroidsFieldsImport?.end || 0,
+            replacement: steroidsImportCode,
+        });
+        updateAst();
+
+        let newImports = [];
+        for (const [index, entityId] of _uniq(toImport.projectEntities).entries()) {
+            if (oldProjectImports.includes(entityId)) {
+                continue;
+            }
+            const entityName = this.getEntityNameByPath(entityId);
+            let relativePath = path.relative(filePath, entityId).replace('.ts', '');
+            // Node js выдает неверный относительный путь
+            if (relativePath.startsWith('../../')) {
+                relativePath = relativePath.slice(3);
+            } else {
+                relativePath = relativePath.slice(1);
+            }
+            newImports.push(`import {${entityName}} from '${relativePath}';`);
+        }
+        const lastImport = importStatements.at(-1);
+        fileContent = updateFileContent(fileContent, {
+            start: lastImport.end || 0,
+            end: lastImport.end || 0,
+            replacement: newImports.join('\n'),
+        });
+        updateAst();
+
+        // Обновляем содержимое файла
+        fs.writeFileSync(filePath, fileContent);
     }
  }

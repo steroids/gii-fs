@@ -36,4 +36,10 @@ export class ProjectModelFieldModel {
 
     @BooleanField({nullable: true})
     isRequired?: boolean;
+
+    @StringField({
+        label: 'Поле enum из EnumField',
+        nullable: true
+    })
+    enumId?: string;
 }

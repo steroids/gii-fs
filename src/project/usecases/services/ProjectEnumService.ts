@@ -87,6 +87,25 @@ export class ProjectEnumService {
             updateAst();
         }
 
+        // Удаляем старые поля
+        const fragmentsToRemove = [];
+        const propertyNodes = classNode.members.filter(member => (
+            member.kind === SyntaxKind.PropertyDeclaration
+        ));
+        for (const propertyNode of propertyNodes) {
+            if (!dto.fields.some(field => field.oldId === propertyNode.name.escapedText)) {
+                const labelProperty = labelsFunction.body.statements[0].expression.properties.find(property => (
+                    property.name.expression.name.escapedText === propertyNode.name.escapedText
+                ));
+                fragmentsToRemove.push(
+                    {start: propertyNode.pos, end: propertyNode.end + 1, replacement: ''}, // +1 для переноса строки
+                    {start: labelProperty.pos, end: labelProperty.end + 2, replacement: ''}, // +2 для переноса строки и запятой
+                );
+            }
+        }
+        fileContent = updateFileContent(fileContent, fragmentsToRemove);
+        updateAst();
+
         // Обновляем существующие поля
         const fieldsToCreate = []
         for (const field of dto.fields) {
@@ -132,25 +151,6 @@ export class ProjectEnumService {
             fileContent = updateFileContent(fileContent, toUpdate);
             updateAst();
         }
-
-        // Удаляем старые поля
-        const fragmentsToRemove = [];
-        const propertyNodes = classNode.members.filter(member => (
-            member.kind === SyntaxKind.PropertyDeclaration
-        ));
-        for (const propertyNode of propertyNodes) {
-            if (!dto.fields.some(field => field.oldId === propertyNode.name.escapedText)) {
-                const labelProperty = labelsFunction.body.statements[0].expression.properties.find(property => (
-                    property.name.expression.name.escapedText === propertyNode.name.escapedText
-                ));
-                fragmentsToRemove.push(
-                    {start: propertyNode.pos, end: propertyNode.end + 1, replacement: ''}, // +1 для переноса строки
-                    {start: labelProperty.pos, end: labelProperty.end + 2, replacement: ''}, // +2 для переноса строки и запятой
-                );
-            }
-        }
-        fileContent = updateFileContent(fileContent, fragmentsToRemove);
-        updateAst();
 
         // Добавляем новые поля
         const lastFieldNode = classNode.members.reduce((prevFieldNode, node) => (

@@ -15,7 +15,7 @@ import {ProjectEnumService} from '../usecases/services/ProjectEnumService';
     ],
     providers: [
         ModuleHelper.provide(ProjectService, [ConfigService]),
-        ModuleHelper.provide(ProjectModelService, []),
+        ModuleHelper.provide(ProjectModelService, [ProjectService]),
         ModuleHelper.provide(ProjectEnumService, [ProjectService]),
     ]
 })

@@ -1,8 +1,12 @@
 import {ExtendField} from '@steroidsjs/nest/infrastructure/decorators/fields/ExtendField';
 import {ProjectModelFieldModel} from '../../domain/models/ProjectModelFieldModel';
-import {ModelRelationScheme} from './ModelRelationScheme';
+import {RelationSaveDto} from './RelationSaveDto';
+import {StringField} from '@steroidsjs/nest/infrastructure/decorators/fields';
 
-export class ModelFieldScheme {
+export class ModelFieldSaveDto {
+    @StringField()
+    oldName: string;
+
     @ExtendField(ProjectModelFieldModel)
     name: string;
 
@@ -16,9 +20,9 @@ export class ModelFieldScheme {
     defaultValue?: any;
 
     @ExtendField(ProjectModelFieldModel, {
-        relationClass: () => ModelRelationScheme,
+        relationClass: () => RelationSaveDto,
     })
-    relation: ModelRelationScheme;
+    relation: RelationSaveDto;
 
     @ExtendField(ProjectModelFieldModel)
     isPrimaryKey?: boolean;

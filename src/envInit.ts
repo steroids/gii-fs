@@ -9,3 +9,4 @@ dotenv.config();
 // Possible solution: provide modules that require these variables using Nest Dynamic Modules
 // https://docs.nestjs.com/fundamentals/dynamic-modules
 process.env.APP_ENVIRONMENT = process.env.APP_ENVIRONMENT || 'dev';
+process.env.SWAGGER_URL = '/api/docs';
