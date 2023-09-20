@@ -98,8 +98,8 @@ export class ProjectEnumService {
                     property.name.expression.name.escapedText === propertyNode.name.escapedText
                 ));
                 fragmentsToRemove.push(
-                    {start: propertyNode.pos, end: propertyNode.end + 1, replacement: ''}, // +1 для переноса строки
-                    {start: labelProperty.pos, end: labelProperty.end + 2, replacement: ''}, // +2 для переноса строки и запятой
+                    {start: propertyNode.pos, end: propertyNode.end, replacement: ''}, // +1 для переноса строки
+                    {start: labelProperty.pos + 1, end: labelProperty.end + 2, replacement: ''}, // +2 для переноса строки и запятой
                 );
             }
         }
@@ -117,6 +117,9 @@ export class ProjectEnumService {
                 fieldsToCreate.push(field);
                 continue;
             }
+
+            // console.log(fileContent);
+
             const labelProperty = labelsFunction.body.statements[0].expression.properties.find(property => (
                 property.name.expression.name.escapedText === field.oldId
             ));
@@ -124,7 +127,7 @@ export class ProjectEnumService {
             if (fieldIdNode.name.escapedText !== field.id) {
                 toUpdate.push(
                     {
-                        start: fieldIdNode.name.pos,
+                        start: fieldIdNode.name.pos + 1,
                         end: fieldIdNode.name.end,
                         replacement: field.id,
                     },
@@ -133,18 +136,17 @@ export class ProjectEnumService {
                         end: fieldIdNode.initializer.end,
                         replacement: `'${field.id.toLowerCase()}'`,
                     },
-                    //TODO понять, откуда смещение на 1 символ
                     {
-                        start: labelProperty.name.expression.pos,
-                        end: labelProperty.name.expression.end,
-                        replacement: `his.${field.id}`,
+                        start: labelProperty.name.expression.name.pos - 2,
+                        end: labelProperty.name.expression.name.end - 2,
+                        replacement: field.id,
                     },
                 );
             }
 
             if (labelProperty.initializer.text !== field.label) {
                 toUpdate.push(
-                    {start: labelProperty.initializer.pos, end: labelProperty.initializer.end, replacement: `'${field.label}'`},
+                    {start: labelProperty.initializer.pos + 2, end: labelProperty.initializer.end - 1, replacement: field.label},
                 );
             }
 
@@ -162,19 +164,15 @@ export class ProjectEnumService {
 
         const lastLabelNode = labelsFunction.body.statements[0].expression.properties.at(-1);
 
-        let newDeclarationsContent = '';
-        let newLabelsContent = '';
-        for (const [index, field] of fieldsToCreate.entries()) {
-            newDeclarationsContent +=  `\n${tab()}static ${field.id} = '${field.id.toLowerCase()}';`;
-            newLabelsContent += `${tab(3)}[this.${field.id}]: '${field.label}',`;
-            if (index !== fieldsToCreate.length - 1) {
-                newDeclarationsContent += '\n';
-                newLabelsContent += '\n';
-            }
+        let newDeclarations = [];
+        let newLabels = [];
+        for (const field of fieldsToCreate) {
+            newDeclarations.push(`\n${tab()}static ${field.id} = '${field.id.toLowerCase()}';`);
+            newLabels.push(`${tab(3)}[this.${field.id}]: '${field.label}',`);
         }
         fileContent = updateFileContent(fileContent, [
-            {start: lastFieldNode.end, end: lastFieldNode.end, replacement: newDeclarationsContent},
-            {start: lastLabelNode.end + 1, end: lastLabelNode.end + 1, replacement: newLabelsContent},
+            {start: lastFieldNode.end + 1, end: lastFieldNode.end, replacement: newDeclarations.join('\n')},
+            {start: lastLabelNode.end + 1, end: lastLabelNode.end + 1, replacement: newLabels.join('\n') + '\n'},
         ]);
         updateAst();
 

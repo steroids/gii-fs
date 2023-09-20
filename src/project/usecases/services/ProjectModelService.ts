@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as ts from 'typescript';
 import {SyntaxKind} from 'typescript';
 import {at as _at} from 'lodash';
+import * as path from 'path';
 import {ModelScheme} from '../../infrastructure/schemes/ModelScheme';
 import {ProjectModelFieldModel} from '../../domain/models/ProjectModelFieldModel';
 import {SteroidsFieldsEnum} from '../../domain/enums/SteroidsFieldsEnum';
@@ -138,7 +139,7 @@ export class ProjectModelService {
             // start меньше для удаления \n
             // end больше для удаления запятой
             return {
-                code: {start: optionNode.pos - 1, end: optionNode.end + 1, replacement: ''},
+                code: {start: optionNode.pos, end: optionNode.end + 1, replacement: ''},
                 entitiesToImport: [],
             };
         }
@@ -155,7 +156,7 @@ export class ProjectModelService {
         if (newValue !== oldValue) {
             const fieldOptionInfo = this.getFieldOptionCode(optionName, newValue);
             return {
-                code: {start: optionNode.pos - 1, end: optionNode.end + 1, replacement: `\n${tab(2)}${fieldOptionInfo?.code}`},
+                code: {start: optionNode.pos, end: optionNode.end + 1, replacement: `\n${tab(2)}${fieldOptionInfo?.code}`},
                 entitiesToImport: fieldOptionInfo?.entitiesToImport,
             };
         }
@@ -264,23 +265,24 @@ export class ProjectModelService {
         }
 
         // Создаем новые поля
-        let newContent = '';
+        let newContent = [];
         const lastPropertyNode = classNode.members
             .filter(member => member.kind === SyntaxKind.PropertyDeclaration)
             .at(-1);
-        for (const [index, field] of fieldsToCreate.entries()) {
+        for (const field of fieldsToCreate) {
             const modelFieldData = this.generateModelField(field);
-            newContent += '\n' + modelFieldData.code;
-            if (index !== fieldsToCreate.length - 1) {
-                newContent += '\n';
-            }
+            newContent.push('\n' + modelFieldData.code);
             if (modelFieldData.entitiesToImport?.length) {
                 entitiesToImport.push(...modelFieldData.entitiesToImport);
             }
         }
         if (newContent) {
             fileContent = updateFileContent(fileContent,
-                {start: lastPropertyNode.end, end: lastPropertyNode.end, replacement: newContent},
+                {
+                    start: lastPropertyNode.end,
+                    end: lastPropertyNode.end,
+                    replacement: '\n' + newContent.join('\n'),
+                },
             );
             updateAst();
         }
@@ -381,6 +383,41 @@ export class ProjectModelService {
     }
 
     public createModel(projectName: string, moduleName: string, dto: ModelSaveDto) {
+        const MODELS_NAME_KEY = '%modelName%';
+        const PROPERTIES_DECLARATIONS_KEY = '%propertiesDeclarations%';
 
+        const modulePath = this.projectService.getModulePathByName(projectName, moduleName);
+
+        const modelsPath = path.resolve(modulePath, 'domain', 'models');
+        if (!fs.existsSync(modelsPath)) {
+            fs.mkdirSync(modelsPath);
+        }
+
+        const filename = path.resolve(modelsPath, `${dto.name}.ts`);
+        const templatePath = path.resolve(__dirname,  '../../../../public/templates/ModelTemplate.txt');
+        let resultFileContent = fs.readFileSync(templatePath, 'utf-8').toString();
+
+        let properties = [];
+        const projectEntities = [];
+        const steroidsFields = [];
+        for (const field of dto.fields) {
+            const generatedField = this.generateModelField(field);
+            properties.push(generatedField.code);
+            projectEntities.push(...(generatedField.entitiesToImport || []));
+            steroidsFields.push(field.type);
+        }
+
+        resultFileContent = resultFileContent.replace(MODELS_NAME_KEY, dto.name);
+        resultFileContent = resultFileContent.replace(PROPERTIES_DECLARATIONS_KEY, properties.join('\n\n'));
+
+        fs.writeFileSync(filename, resultFileContent);
+
+        // Обновляем блок импортов
+        this.projectService.updateFileImports(filename, {
+            projectEntities,
+            steroidsFields,
+        });
+
+        return this.parseModel(filename);
     }
 }

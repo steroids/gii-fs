@@ -3,7 +3,7 @@ export function tab(count: number = 1) {
 }
 
 export function strReplaceAt(str: string, indexStart: number, indexEnd: number, replacement: string) {
-    return str.substring(0, indexStart + 1) + replacement + str.substring(indexEnd);
+    return str.substring(0, indexStart) + replacement + str.substring(indexEnd);
 }
 
 interface IFragmentToUpdate {

@@ -166,6 +166,7 @@ export class ProjectService {
         const projectName = this.getProjectNameByEntityPath(filePath);
 
         let ast: any;
+        let importStatements: any;
 
         const updateAst = () => {
             ast = ts.createSourceFile(
@@ -173,6 +174,7 @@ export class ProjectService {
                 fileContent,
                 ts.ScriptTarget.Latest
             ).statements;
+            importStatements = ast.filter(statement => statement.kind === SyntaxKind.ImportDeclaration);
         };
 
         updateAst();
@@ -181,7 +183,6 @@ export class ProjectService {
         const oldProjectImports = [];
 
         // Собираем уже существующие импорты и удаляем отдельные импорты steroids fields
-        const importStatements = ast.filter(statement => statement.kind === SyntaxKind.ImportDeclaration);
         const toRemove = [];
         for (const importStatement of importStatements) {
             const moduleSpecifier = importStatement.moduleSpecifier?.text;
@@ -218,7 +219,10 @@ export class ProjectService {
             importStatement.moduleSpecifier?.text === STEROIDS_FIELDS_IMPORT
         ));
 
-        const steroidsImportCode = `import {\n${tab()}${steroidsFields.join(`,\n${tab()}`)},\n} from '${STEROIDS_FIELDS_IMPORT}';`
+        let steroidsImportCode = `import {\n${tab()}${steroidsFields.join(`,\n${tab()}`)},\n} from '${STEROIDS_FIELDS_IMPORT}';`;
+        if (!steroidsFieldsImport) {
+            steroidsImportCode += '\n';
+        }
         fileContent = updateFileContent(fileContent, {
             start: steroidsFieldsImport?.pos - 1 || 0,
             end: steroidsFieldsImport?.end || 0,
@@ -227,7 +231,7 @@ export class ProjectService {
         updateAst();
 
         let newImports = [];
-        for (const [index, entityId] of _uniq(toImport.projectEntities).entries()) {
+        for (const entityId of _uniq(toImport.projectEntities)) {
             if (oldProjectImports.includes(entityId)) {
                 continue;
             }
@@ -243,8 +247,8 @@ export class ProjectService {
         }
         const lastImport = importStatements.at(-1);
         fileContent = updateFileContent(fileContent, {
-            start: lastImport.end || 0,
-            end: lastImport.end || 0,
+            start: lastImport?.end + 1 || 0,
+            end: lastImport?.end + 1 || 0,
             replacement: newImports.join('\n'),
         });
         updateAst();
