@@ -383,7 +383,7 @@ export class ProjectModelService {
         }
 
         const filename = path.resolve(modelsPath, `${dto.name}.ts`);
-        const templatePath = path.resolve(__dirname,  '../../../../public/templates/ModelTemplate.txt');
+        const templatePath = path.resolve(__dirname,  '../../templates/ModelTemplate.txt');
         let resultFileContent = fs.readFileSync(templatePath, 'utf-8').toString();
 
         let properties = [];

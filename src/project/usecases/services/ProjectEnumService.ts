@@ -196,7 +196,7 @@ export class ProjectEnumService {
 
         const filename = path.resolve(enumsPath, `${dto.name}.ts`);
 
-        const templatePath = path.resolve(__dirname,  '../../../../public/templates/EnumTemplate.txt');
+        const templatePath = path.resolve(__dirname,  '../../templates/EnumTemplate.txt');
 
         let resultFileContent = fs.readFileSync(templatePath, 'utf-8').toString();
 
