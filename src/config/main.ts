@@ -1,4 +1,5 @@
 import * as process from 'process';
+import * as path from 'path';
 
 export default () => ({
     name: '@steroidsjs/gii-fs',
@@ -9,8 +10,9 @@ export default () => ({
             '127.0.0.1:9350',
         ],
     },
-    port: 7800,
     project: {
-        configRoute: process.argv.at(-1),
+        configRoute: process.argv.at(-1).endsWith('.json')
+            ? process.argv.at(-1)
+            : path.resolve(require('os').homedir(), 'gii-fs.json'),
     }
 });

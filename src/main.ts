@@ -2,6 +2,8 @@ import {NestFactory, Reflector} from '@nestjs/core';
 import {DocumentBuilder, SwaggerDocumentOptions, SwaggerModule} from '@nestjs/swagger';
 import {ConfigService} from '@nestjs/config';
 import {VersioningType} from '@nestjs/common';
+import * as process from 'process';
+import * as fs from 'fs';
 import './envInit';
 import * as basicAuth from 'express-basic-auth';
 import {AppModule} from './AppModule';
@@ -9,7 +11,6 @@ import {SchemaSerializer} from './base/infrastructure/filters/SchemaSerializer';
 import {CreateDtoPipe} from '@steroidsjs/nest/infrastructure/pipes/CreateDtoPipe';
 import {ValidationExceptionFilter} from '@steroidsjs/nest/infrastructure/filters/ValidationExceptionFilter';
 import {UserExceptionFilter} from '@steroidsjs/nest/infrastructure/filters/UserExceptionFilter';
-import * as process from 'process';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -99,8 +100,14 @@ async function bootstrap() {
         new SchemaSerializer(app.get(Reflector)),
     );
 
+    const configRoute = configService.get('project.configRoute');
+    if (!fs.existsSync(configRoute)) {
+        throw new Error(`Конфиг не обнаружен по пути ${configRoute}`);
+    }
+    const config = JSON.parse(fs.readFileSync(configRoute).toString());
+
     // Start application
-    const port = configService.get('port');
+    const port = config.port || 7800;
     await app.listen(
         port,
         () => console.log(`Server started http://localhost:${port}`), // eslint-disable-line no-console
