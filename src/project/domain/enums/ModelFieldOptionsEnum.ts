@@ -21,6 +21,16 @@ export class ModelFieldOptionsEnum extends BaseEnum {
 
     static INVERSE_SIDE = 'inverseSide';
 
+    static RELATION_NAME = 'relationName';
+
+    static IS_ARRAY = 'isArray';
+
+    static MAX = 'max';
+
+    static MIN = 'min';
+
+    static NO_COLUMN = 'no_column';
+
     private static dtoFieldsMap = {
         [this.LABEL]: 'label',
         [this.NULLABLE]: 'isNullable',
@@ -32,6 +42,11 @@ export class ModelFieldOptionsEnum extends BaseEnum {
         [this.IS_OWNING_SIDE]: 'relation.isOwningSide',
         [this.RELATION_CLASS]: 'relation.modelId',
         [this.INVERSE_SIDE]: 'relation.inverseSide',
+        [this.RELATION_NAME]: 'relationName',
+        [this.IS_ARRAY]: 'isArray',
+        [this.MAX]: 'max',
+        [this.MIN]: 'min',
+        [this.NO_COLUMN]: 'isNoColumn',
     }
 
     static getDtoFields() {
@@ -49,5 +64,25 @@ export class ModelFieldOptionsEnum extends BaseEnum {
             }
         }
         return null;
+    }
+
+    static getLabels() {
+        return {
+            [this.LABEL]: 'Label',
+            [this.NULLABLE]: 'Nullable',
+            [this.REQUIRED]: 'Required',
+            [this.UNIQUE]: 'Unique',
+            [this.DEFAULT_VALUE]: 'Default value',
+            [this.ENUM]: 'Enum',
+            [this.TYPE]: 'Type',
+            [this.IS_OWNING_SIDE]: 'Is owning side',
+            [this.RELATION_CLASS]: 'Relation class',
+            [this.INVERSE_SIDE]: 'Inverse side',
+            [this.RELATION_NAME]: 'Relation name',
+            [this.IS_ARRAY]: 'Is array',
+            [this.MIN]: 'Min',
+            [this.MAX]: 'Max',
+            [this.NO_COLUMN]: 'No column',
+        };
     }
 }

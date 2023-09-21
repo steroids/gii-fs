@@ -1,6 +1,6 @@
 import {
     BooleanField,
-    ComputableField,
+    ComputableField, IntegerField,
     RelationField,
     StringField
 } from '@steroidsjs/nest/infrastructure/decorators/fields';
@@ -42,4 +42,19 @@ export class ProjectModelFieldModel {
         nullable: true
     })
     enumId?: string;
+
+    @StringField()
+    relationName: string;
+
+    @BooleanField({nullable: true})
+    isArray?: boolean;
+
+    @IntegerField({nullable: true})
+    max: number;
+
+    @IntegerField({nullable: true})
+    min: number;
+
+    @BooleanField({nullable: true})
+    isNoColumn: boolean;
 }

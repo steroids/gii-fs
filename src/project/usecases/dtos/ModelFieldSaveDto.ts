@@ -38,4 +38,19 @@ export class ModelFieldSaveDto {
 
     @ExtendField(ProjectModelFieldModel)
     enumId?: string;
+
+    @ExtendField(ProjectModelFieldModel)
+    relationName?: string;
+
+    @ExtendField(ProjectModelFieldModel)
+    isArray?: boolean;
+
+    @ExtendField(ProjectModelFieldModel)
+    max?: number;
+
+    @ExtendField(ProjectModelFieldModel)
+    min?: number;
+
+    @ExtendField(ProjectModelFieldModel)
+    isNoColumn?: boolean;
 }

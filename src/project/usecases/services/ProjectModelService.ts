@@ -2,7 +2,7 @@ import {DataMapper} from '@steroidsjs/nest/usecases/helpers/DataMapper';
 import * as fs from 'fs';
 import * as ts from 'typescript';
 import {SyntaxKind} from 'typescript';
-import {at as _at} from 'lodash';
+import {at as _at, set as _set} from 'lodash';
 import * as path from 'path';
 import {ModelScheme} from '../../infrastructure/schemes/ModelScheme';
 import {ProjectModelFieldModel} from '../../domain/models/ProjectModelFieldModel';
@@ -78,19 +78,8 @@ export class ProjectModelService {
         fieldDto.name = tsMember.name.escapedText;
         fieldDto.type = fieldDecorator.expression.expression.escapedText;
 
-        fieldDto.label = findPropertyValue('label');
-        fieldDto.defaultValue = findPropertyValue('defaultValue');
-        fieldDto.isUnique = findPropertyValue('unique');
-        fieldDto.isNullable = findPropertyValue('nullable');
-        fieldDto.isRequired = findPropertyValue('required');
-        fieldDto.enumId = findPropertyValue('enum');
-
-        if (fieldDto.type === SteroidsFieldsEnum.RELATION_FIELD) {
-            fieldDto.relation = new ProjectRelationModel();
-            fieldDto.relation.type = findPropertyValue('type');
-            fieldDto.relation.modelId = findPropertyValue('relationClass');
-            fieldDto.relation.isOwningSide = findPropertyValue('isOwningSide');
-            fieldDto.relation.inverseSide = findPropertyValue('inverseSide');
+        for (const fieldKey of ModelFieldOptionsEnum.getKeys()) {
+            _set(fieldDto, ModelFieldOptionsEnum.getDtoField(fieldKey), findPropertyValue(fieldKey))
         }
 
         fieldDto = clearObject(fieldDto);
