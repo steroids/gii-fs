@@ -26,7 +26,10 @@ export class ProjectModelService {
     }
 
     private parseModelField(fileContent: string, tsMember: any, projectName: string): ProjectModelFieldModel | null {
-        const fieldDecorator = tsMember.decorators?.find(decorator => decorator.expression.expression.escapedText.includes('Field'));
+        let fieldDecorator = tsMember.decorators?.find(decorator => decorator.expression.expression.escapedText.includes('Field'));
+        if (!fieldDecorator) {
+            fieldDecorator = tsMember.modifiers?.find(decorator => decorator.expression.expression.escapedText.includes('Field'));
+        }
         if (!fieldDecorator) {
             return null;
         }
@@ -210,9 +213,12 @@ export class ProjectModelService {
                 continue;
             }
 
-            const fieldDecorator = fieldNode.decorators?.find(decorator => decorator.expression.expression.escapedText.includes('Field'));
+            let fieldDecorator = fieldNode.decorators?.find(decorator => decorator.expression.expression.escapedText.includes('Field'));
+            if (!fieldDecorator) {
+                fieldDecorator = fieldNode.modifiers?.find(decorator => decorator.expression.expression.escapedText.includes('Field'));
+            }
             // Если изменился тип поля, обновляем его целиком
-            if (fieldDecorator.expression.expression.escapedText !== field.type) {
+            if (fieldDecorator?.expression?.expression.escapedText !== field.type) {
                 const generatedFieldInfo = this.generateModelField(field);
                 toUpdate.push({
                     start: fieldNode.pos,
