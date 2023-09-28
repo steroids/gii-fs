@@ -7,7 +7,6 @@ import * as path from 'path';
 import {ModelScheme} from '../../infrastructure/schemes/ModelScheme';
 import {ProjectModelFieldModel} from '../../domain/models/ProjectModelFieldModel';
 import {SteroidsFieldsEnum} from '../../domain/enums/SteroidsFieldsEnum';
-import {ProjectRelationModel} from '../../domain/models/ProjectRelationModel';
 import {ProjectModelModel} from '../../domain/models/ProjectModelModel';
 import {ModelSaveDto} from '../dtos/ModelSaveDto';
 import {clearObject, tab, updateFileContent} from '../helpers';
@@ -389,7 +388,7 @@ export class ProjectModelService {
         }
 
         const filename = path.resolve(modelsPath, `${dto.name}.ts`);
-        const templatePath = path.resolve(__dirname,  '../../templates/ModelTemplate.txt');
+        const templatePath = path.resolve(__dirname,  '../templates/ModelTemplate.txt');
         let resultFileContent = fs.readFileSync(templatePath, 'utf-8').toString();
 
         let properties = [];
