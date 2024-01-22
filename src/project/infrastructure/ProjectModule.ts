@@ -5,6 +5,7 @@ import {ProjectController} from './controllers/ProjectController';
 import {ProjectService} from '../usecases/services/ProjectService';
 import {ProjectModelService} from '../usecases/services/ProjectModelService';
 import {ProjectEnumService} from '../usecases/services/ProjectEnumService';
+import {ProjectParserService} from '../usecases/services/ProjectParserService';
 
 @Module({
     imports: [
@@ -14,9 +15,15 @@ import {ProjectEnumService} from '../usecases/services/ProjectEnumService';
         ProjectController,
     ],
     providers: [
-        ModuleHelper.provide(ProjectService, [ConfigService]),
-        ModuleHelper.provide(ProjectModelService, [ProjectService]),
-        ModuleHelper.provide(ProjectEnumService, [ProjectService]),
+        ModuleHelper.provide(ProjectParserService, [ConfigService]),
+        ModuleHelper.provide(ProjectModelService, [ProjectParserService]),
+        ModuleHelper.provide(ProjectEnumService, [ProjectParserService]),
+        ModuleHelper.provide(ProjectService, [
+            ProjectParserService,
+            ProjectModelService,
+            ProjectEnumService,
+            ConfigService,
+        ]),
     ]
 })
 export class ProjectModule {}

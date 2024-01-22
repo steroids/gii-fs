@@ -10,13 +10,13 @@ import {SteroidsFieldsEnum} from '../../domain/enums/SteroidsFieldsEnum';
 import {ProjectModelModel} from '../../domain/models/ProjectModelModel';
 import {ModelSaveDto} from '../dtos/ModelSaveDto';
 import {clearObject, tab, updateFileContent} from '../helpers';
-import {ProjectService} from './ProjectService';
 import {ModelFieldSaveDto} from '../dtos/ModelFieldSaveDto';
 import {ModelFieldOptionsEnum} from '../../domain/enums/ModelFieldOptionsEnum';
+import {ProjectParserService} from './ProjectParserService';
 
 export class ProjectModelService {
     constructor(
-        private projectService: ProjectService,
+        private projectParserService: ProjectParserService,
     ) {}
 
     public getModelInfo(id: string) {
@@ -27,7 +27,7 @@ export class ProjectModelService {
     private parseModelField(fileContent: string, tsMember: any, projectName: string): ProjectModelFieldModel | null {
         let fieldDecorator = tsMember.decorators?.find(decorator => decorator.expression.expression.escapedText.includes('Field'));
         if (!fieldDecorator) {
-            fieldDecorator = tsMember.modifiers?.find(decorator => decorator.expression.expression.escapedText.includes('Field'));
+            fieldDecorator = tsMember.modifiers?.find(decorator => decorator.expression?.expression?.escapedText?.includes('Field'));
         }
         if (!fieldDecorator) {
             return null;
@@ -48,7 +48,7 @@ export class ProjectModelService {
 
             if (initializer?.kind === SyntaxKind.PropertyAccessExpression) {
                 return {
-                    entityId: this.projectService.getEntityIdByName(projectName, initializer.expression?.escapedText),
+                    entityId: this.projectParserService.getEntityIdByName(projectName, initializer.expression?.escapedText),
                     property: initializer.name?.escapedText,
                 };
             }
@@ -56,13 +56,16 @@ export class ProjectModelService {
             // Пока что inverseSide получается как строка, нужно подумать, как с ней работать в дальнейшем
             if (initializer?.kind === SyntaxKind.ArrowFunction) {
                 if (initializer.body.kind === SyntaxKind.Identifier) {
-                    return this.projectService.getEntityIdByName(projectName, initializer.body.escapedText);
+                    return {
+                        modelId: this.projectParserService.getEntityIdByName(projectName, initializer.body.escapedText),
+                        modelName: initializer.body.escapedText,
+                    };
                 }
                 return fileContent.slice(initializer.pos + 1, initializer.end);
             }
 
             if (initializer?.kind === SyntaxKind.Identifier) {
-                return this.projectService.getEntityIdByName(projectName, initializer.escapedText);
+                return this.projectParserService.getEntityIdByName(projectName, initializer.escapedText);
             }
 
             if (initializer?.text) {
@@ -72,16 +75,28 @@ export class ProjectModelService {
             return initializer;
         }
 
-        const findPropertyValue = (propertyName: string) => getValue(fieldDecorator.expression.arguments?.[0]?.properties?.find(property => (
-            property.name.escapedText === propertyName
-        ))?.initializer)
+        const findPropertyValue = (propertyName: string) => getValue(
+            fieldDecorator.expression.arguments?.[0]?.properties
+            ?.find(property => property.name.escapedText === propertyName)
+            ?.initializer
+        )
 
         let fieldDto = new ProjectModelFieldModel();
         fieldDto.name = tsMember.name.escapedText;
         fieldDto.type = fieldDecorator.expression.expression.escapedText;
 
         for (const fieldKey of ModelFieldOptionsEnum.getKeys()) {
-            _set(fieldDto, ModelFieldOptionsEnum.getDtoField(fieldKey), findPropertyValue(fieldKey))
+            const key = ModelFieldOptionsEnum.getDtoField(fieldKey);
+            const value = findPropertyValue(fieldKey);
+
+            if (typeof fieldDto[key] === 'object' && typeof value === 'object') {
+                fieldDto[key] = {
+                    ...fieldDto[key],
+                    ...value,
+                };
+            } else {
+                _set(fieldDto, ModelFieldOptionsEnum.getDtoField(fieldKey), findPropertyValue(fieldKey))
+            }
         }
 
         fieldDto = clearObject(fieldDto);
@@ -90,7 +105,7 @@ export class ProjectModelService {
     }
 
     private parseModel(modelPath: string): ProjectModelModel {
-        const projectName = this.projectService.getProjectNameByEntityPath(modelPath);
+        const projectName = this.projectParserService.getProjectNameByEntityPath(modelPath);
 
         let fileContent = fs.readFileSync(modelPath).toString();
         const ast: any = ts.createSourceFile(
@@ -285,7 +300,7 @@ export class ProjectModelService {
         fs.writeFileSync(dto.id, fileContent);
 
         // Обновляем блок импортов
-        this.projectService.updateFileImports(dto.id, {
+        this.projectParserService.updateFileImports(dto.id, {
             projectEntities: entitiesToImport,
             steroidsFields: steroidsFieldsToImport,
         });
@@ -302,7 +317,7 @@ export class ProjectModelService {
         let type = SteroidsFieldsEnum.getFieldType(fieldDto.type);
 
         if (type === 'object' && fieldDto.type === SteroidsFieldsEnum.RELATION_FIELD) {
-            type = this.projectService.getEntityNameByPath(fieldDto.relation?.modelId);
+            type = this.projectParserService.getEntityNameByPath(fieldDto.relation?.modelId);
             entitiesToImport.push(fieldDto.relation?.modelId);
         }
         if (['OneToMany', 'ManyToMany'].includes(fieldDto.relation?.type)) {
@@ -338,14 +353,14 @@ export class ProjectModelService {
             };
         }
         if (optionName === ModelFieldOptionsEnum.RELATION_CLASS) {
-            const modelName = this.projectService.getEntityNameByPath(fieldValue);
+            const modelName = this.projectParserService.getEntityNameByPath(fieldValue);
             return {
                 code: `relationClass: () => ${modelName},`,
                 entitiesToImport: [fieldValue],
             };
         }
         if (optionName === ModelFieldOptionsEnum.ENUM) {
-            const enumName = this.projectService.getEntityNameByPath(fieldValue);
+            const enumName = this.projectParserService.getEntityNameByPath(fieldValue);
             return {
                 code: `enum: ${enumName},`,
                 entitiesToImport: [fieldValue],
@@ -358,7 +373,7 @@ export class ProjectModelService {
             };
         }
         if (typeof fieldValue === 'object' && fieldValue.entityId && fieldValue.property) {
-            const entityName = this.projectService.getEntityNameByPath(fieldValue.entityId);
+            const entityName = this.projectParserService.getEntityNameByPath(fieldValue.entityId);
             return {
                 code: `${optionName}: ${entityName}.${fieldValue.property},`,
                 entitiesToImport: [fieldValue.entityId],
@@ -380,7 +395,7 @@ export class ProjectModelService {
         const MODELS_NAME_KEY = '%modelName%';
         const PROPERTIES_DECLARATIONS_KEY = '%propertiesDeclarations%';
 
-        const modulePath = this.projectService.getModulePathByName(projectName, moduleName);
+        const modulePath = this.projectParserService.getModulePathByName(projectName, moduleName);
 
         const modelsPath = path.resolve(modulePath, 'domain', 'models');
         if (!fs.existsSync(modelsPath)) {
@@ -407,7 +422,7 @@ export class ProjectModelService {
         fs.writeFileSync(filename, resultFileContent);
 
         // Обновляем блок импортов
-        this.projectService.updateFileImports(filename, {
+        this.projectParserService.updateFileImports(filename, {
             projectEntities,
             steroidsFields,
         });

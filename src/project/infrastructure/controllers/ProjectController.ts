@@ -8,6 +8,7 @@ import {EnumSaveDto} from '../../usecases/dtos/EnumSaveDto';
 import {ModelSaveDto} from '../../usecases/dtos/ModelSaveDto';
 import {ModelScheme} from '../schemes/ModelScheme';
 import {EnumScheme} from '../schemes/EnumScheme';
+import {ProjectDetailScheme} from '../schemes/ProjectDetailScheme';
 
 @ApiTags('Информация о проекте')
 @Controller()
@@ -23,10 +24,18 @@ export class ProjectController {
         private enumService: ProjectEnumService,
     ) {}
 
-    @Get('/projects')
+    @Get('/project')
     @ApiOkResponse({type: ProjectScheme, isArray: true})
     async getProjects() {
         return this.projectService.getProjects();
+    }
+
+    @Get('/project/:name')
+    @ApiOkResponse({type: ProjectDetailScheme})
+    async getProject(
+        @Param('name') name: string,
+    ) {
+        return this.projectService.getProject(name);
     }
 
     @Get('/model/:id')

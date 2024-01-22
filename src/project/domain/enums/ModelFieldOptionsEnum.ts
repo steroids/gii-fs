@@ -40,7 +40,7 @@ export class ModelFieldOptionsEnum extends BaseEnum {
         [this.ENUM]: 'enumId',
         [this.TYPE]: 'relation.type',
         [this.IS_OWNING_SIDE]: 'relation.isOwningSide',
-        [this.RELATION_CLASS]: 'relation.modelId',
+        [this.RELATION_CLASS]: 'relation',
         [this.INVERSE_SIDE]: 'relation.inverseSide',
         [this.RELATION_NAME]: 'relationName',
         [this.IS_ARRAY]: 'isArray',

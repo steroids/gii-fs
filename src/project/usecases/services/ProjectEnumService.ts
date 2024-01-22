@@ -8,13 +8,13 @@ import {ProjectEnumModel} from '../../domain/models/ProjectEnumModel';
 import {ProjectEnumFieldModel} from '../../domain/models/ProjectEnumFieldModel';
 import {tab, updateFileContent} from '../helpers';
 import {EnumSaveDto} from '../dtos/EnumSaveDto';
-import {ProjectService} from './ProjectService';
+import {ProjectParserService} from './ProjectParserService';
 
 const LABELS_FUNCTION_NAME = 'getLabels';
 
 export class ProjectEnumService {
     constructor(
-        private projectService: ProjectService,
+        private projectParserService: ProjectParserService,
     ) {}
 
     public getEnumInfo(id: string) {
@@ -37,21 +37,26 @@ export class ProjectEnumService {
         enumDto.name = enumNode.name?.escapedText;
 
         const labelsFunction = enumNode.members.find(member => member.name.escapedText === LABELS_FUNCTION_NAME);
-        for (const member of enumNode.members) {
-            if (!member.name.escapedText || member.parameters) {
-                continue;
+        if (labelsFunction) {
+            for (const member of enumNode.members) {
+                if (!member.name.escapedText || member.parameters) {
+                    continue;
+                }
+                const fieldDto = new ProjectEnumFieldModel();
+                fieldDto.id = member.name.escapedText;
+
+                if (labelsFunction.body?.statements?.[0]?.expression?.properties) {
+                    const labelProperty = labelsFunction.body.statements[0].expression.properties.find(property => (
+                        property.name.expression.name.escapedText === fieldDto.id
+                    ));
+                    if (labelProperty) {
+                        fieldDto.label = labelProperty.initializer.text;
+                    }
+                }
+
+                enumDto.fields.push(fieldDto);
             }
-            const fieldDto = new ProjectEnumFieldModel();
-            fieldDto.id = member.name.escapedText;
-
-            const labelProperty = labelsFunction.body.statements[0].expression.properties.find(property => (
-                property.name.expression.name.escapedText === fieldDto.id
-            ));
-            fieldDto.label = labelProperty.initializer.text;
-
-            enumDto.fields.push(fieldDto);
         }
-
 
         return enumDto;
     }
@@ -187,7 +192,7 @@ export class ProjectEnumService {
         const PROPERTIES_DECLARATIONS_KEY = '%propertiesDeclarations%';
         const LABELS_DECLARATIONS_KEY = '%labelsDeclarations%';
 
-        const modulePath = this.projectService.getModulePathByName(projectName, moduleName);
+        const modulePath = this.projectParserService.getModulePathByName(projectName, moduleName);
 
         const enumsPath = path.resolve(modulePath, 'domain', 'enums');
         if (!fs.existsSync(enumsPath)) {
