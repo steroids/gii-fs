@@ -17,7 +17,8 @@ import {ProjectParserService} from './ProjectParserService';
 export class ProjectModelService {
     constructor(
         private projectParserService: ProjectParserService,
-    ) {}
+    ) {
+    }
 
     public getModelInfo(id: string) {
         const model = this.parseModel(id);
@@ -77,8 +78,8 @@ export class ProjectModelService {
 
         const findPropertyValue = (propertyName: string) => getValue(
             fieldDecorator.expression.arguments?.[0]?.properties
-            ?.find(property => property.name.escapedText === propertyName)
-            ?.initializer
+                ?.find(property => property.name.escapedText === propertyName)
+                ?.initializer
         )
 
         let fieldDto = new ProjectModelFieldModel();
@@ -127,13 +128,29 @@ export class ProjectModelService {
                 console.log(e);
             }
         }
-        model.fields = model.fields.filter(Boolean);
+        model.fields = model.fields
+            .filter(Boolean)
+            .filter(field => {
+                // Убираем RelationField типы, для которых есть RelationIdField (т.к. они по сути дублируют друг друга)
+                if (field.type === 'RelationField' && ['OneToOne', 'ManyToOne'].includes(field.relation?.type)) {
+                    const relationIdField = model.fields.find(item => item.relationName === field.name);
+                    if (relationIdField) {
+                        relationIdField.relation = {
+                            ...field.relation,
+                            ...relationIdField.relation,
+                        };
+                        return false;
+                    }
+                }
+
+                return true;
+            });
 
         return model;
     }
 
-    private updateModelFieldOption(optionName: string, newValue: any, oldValue: any, fieldDecoratorNode: any) {
-        if (newValue === oldValue) {
+    private updateModelFieldOption(projectName, moduleName, optionName: string, newValue: any, oldValue: any, fieldDecoratorNode: any) {
+        if (newValue === oldValue || (!oldValue && !newValue)) {
             return null;
         }
         const optionNode = fieldDecoratorNode.expression.arguments?.[0]?.properties?.find(property => (
@@ -150,28 +167,47 @@ export class ProjectModelService {
             };
         }
         // Объявляем новое свойство
-        if (typeof newValue !== 'undefined' && typeof oldValue === 'undefined') {
+        if (newValue && typeof oldValue === 'undefined') {
             const lastOptionNode = fieldDecoratorNode.expression.arguments?.[0]?.properties?.at(-1);
-            const fieldOptionInfo = this.getFieldOptionCode(optionName, newValue);
+            const fieldOptionInfo = this.getFieldOptionCode(projectName, moduleName, optionName, newValue);
+            if (!lastOptionNode) {
+                return {
+                    code: {
+                        start: fieldDecoratorNode.expression.arguments.end,
+                        end: fieldDecoratorNode.expression.arguments.end + 1,
+                        replacement: `{\n${tab(2)}${fieldOptionInfo?.code}\n${tab(1)}})`
+                    },
+                    entitiesToImport: fieldOptionInfo?.entitiesToImport,
+                };
+            }
             return {
-                code: {start: lastOptionNode.end, end: lastOptionNode.end + 1, replacement: `\n${tab(2)}${fieldOptionInfo?.code}`},
+                code: {
+                    start: lastOptionNode.end,
+                    end: lastOptionNode.end + 1,
+                    replacement: `\n${tab(2)}${fieldOptionInfo?.code}`
+                },
                 entitiesToImport: fieldOptionInfo?.entitiesToImport,
             };
         }
         // Обновляем существующее свойство
         if (newValue !== oldValue) {
-            const fieldOptionInfo = this.getFieldOptionCode(optionName, newValue);
+            const fieldOptionInfo = this.getFieldOptionCode(projectName, moduleName, optionName, newValue);
             return {
-                code: {start: optionNode.pos, end: optionNode.end + 1, replacement: `\n${tab(2)}${fieldOptionInfo?.code}`},
+                code: {
+                    start: optionNode.pos,
+                    end: optionNode.end + 1,
+                    replacement: `\n${tab(2)}${fieldOptionInfo?.code}`
+                },
                 entitiesToImport: fieldOptionInfo?.entitiesToImport,
             };
         }
     }
 
-    public updateModel(dto: ModelSaveDto) {
-        const prevModel = this.parseModel(dto.id);
+    public updateModel(projectName, moduleName, dto: ModelSaveDto) {
+        const modelPath = this.projectParserService.getModelPathByName(projectName, moduleName, dto.name);
+        const prevModel = this.parseModel(modelPath);
 
-        let fileContent = fs.readFileSync(dto.id).toString();
+        let fileContent = fs.readFileSync(modelPath).toString();
         let ast: any;
         let classNode: any;
         const entitiesToImport = [];
@@ -233,7 +269,7 @@ export class ProjectModelService {
             }
             // Если изменился тип поля, обновляем его целиком
             if (fieldDecorator?.expression?.expression.escapedText !== field.type) {
-                const generatedFieldInfo = this.generateModelField(field);
+                const generatedFieldInfo = this.generateModelField(projectName, moduleName, field);
                 toUpdate.push({
                     start: fieldNode.pos,
                     end: fieldNode.end,
@@ -255,6 +291,8 @@ export class ProjectModelService {
 
             for (const dtoField of ModelFieldOptionsEnum.getDtoFields()) {
                 const optionUpdateInfo = this.updateModelFieldOption(
+                    projectName,
+                    moduleName,
                     ModelFieldOptionsEnum.getOptionByDtoField(dtoField),
                     _at(field, dtoField)?.[0],
                     _at(prevField, dtoField)?.[0],
@@ -279,7 +317,7 @@ export class ProjectModelService {
             .filter(member => member.kind === SyntaxKind.PropertyDeclaration)
             .at(-1);
         for (const field of fieldsToCreate) {
-            const modelFieldData = this.generateModelField(field);
+            const modelFieldData = this.generateModelField(projectName, moduleName, field);
             newContent.push('\n' + modelFieldData.code);
             if (modelFieldData.entitiesToImport?.length) {
                 entitiesToImport.push(...modelFieldData.entitiesToImport);
@@ -297,18 +335,18 @@ export class ProjectModelService {
         }
 
         // Обновляем содержимое файла
-        fs.writeFileSync(dto.id, fileContent);
+        fs.writeFileSync(modelPath, fileContent);
 
         // Обновляем блок импортов
-        this.projectParserService.updateFileImports(dto.id, {
+        this.projectParserService.updateFileImports(modelPath, {
             projectEntities: entitiesToImport,
             steroidsFields: steroidsFieldsToImport,
         });
 
-        return this.parseModel(dto.id);
+        return this.parseModel(modelPath);
     }
 
-    private generateModelField(fieldDto: ModelFieldSaveDto): {code: string, entitiesToImport: string[]} {
+    private generateModelField(projectName, moduleName, fieldDto: ModelFieldSaveDto): { code: string, entitiesToImport: string[] } {
         const tabsCount = 2;
         const entitiesToImport = [];
 
@@ -326,7 +364,12 @@ export class ProjectModelService {
         code += `${type};`;
 
         for (const dtoField of ModelFieldOptionsEnum.getDtoFields()) {
-            const info = this.getFieldOptionCode(ModelFieldOptionsEnum.getOptionByDtoField(dtoField), _at(fieldDto, dtoField)?.[0]);
+            const info = this.getFieldOptionCode(
+                projectName,
+                moduleName,
+                ModelFieldOptionsEnum.getOptionByDtoField(dtoField),
+                _at(fieldDto, dtoField)?.[0]
+            );
             if (info.code) {
                 paramsCode += `${tab(tabsCount)}${info.code}\n`;
             }
@@ -336,7 +379,7 @@ export class ProjectModelService {
         }
 
         if (paramsCode) {
-            code = code.replace('%params%',  `{\n${paramsCode}${tab()}}`);
+            code = code.replace('%params%', `{\n${paramsCode}${tab()}}`);
         } else {
             code = code.replace('%params%', '');
         }
@@ -345,7 +388,7 @@ export class ProjectModelService {
         return {code, entitiesToImport};
     }
 
-    private getFieldOptionCode(optionName: string, fieldValue: any) {
+    private getFieldOptionCode(projectName: string, moduleName: string, optionName: string, fieldValue: any) {
         if (typeof fieldValue === 'undefined') {
             return {
                 code: null,
@@ -353,6 +396,11 @@ export class ProjectModelService {
             };
         }
         if (optionName === ModelFieldOptionsEnum.RELATION_CLASS) {
+            console.log(123, optionName, fieldValue);
+            if (!path.isAbsolute(fieldValue)) {
+                fieldValue = this.projectParserService.getModelPathByName(projectName, moduleName, fieldValue);
+            }
+
             const modelName = this.projectParserService.getEntityNameByPath(fieldValue);
             return {
                 code: `relationClass: () => ${modelName},`,
@@ -372,7 +420,7 @@ export class ProjectModelService {
                 entitiesToImport: [],
             };
         }
-        if (typeof fieldValue === 'object' && fieldValue.entityId && fieldValue.property) {
+        if (fieldValue && typeof fieldValue === 'object' && fieldValue.entityId && fieldValue.property) {
             const entityName = this.projectParserService.getEntityNameByPath(fieldValue.entityId);
             return {
                 code: `${optionName}: ${entityName}.${fieldValue.property},`,
@@ -403,14 +451,14 @@ export class ProjectModelService {
         }
 
         const filename = path.resolve(modelsPath, `${dto.name}.ts`);
-        const templatePath = path.resolve(__dirname,  '../templates/ModelTemplate.txt');
+        const templatePath = path.resolve(__dirname, '../templates/ModelTemplate.txt');
         let resultFileContent = fs.readFileSync(templatePath, 'utf-8').toString();
 
         let properties = [];
         const projectEntities = [];
         const steroidsFields = [];
         for (const field of dto.fields) {
-            const generatedField = this.generateModelField(field);
+            const generatedField = this.generateModelField(projectName, moduleName, field);
             properties.push(generatedField.code);
             projectEntities.push(...(generatedField.entitiesToImport || []));
             steroidsFields.push(field.type);

@@ -30,24 +30,16 @@ export class ProjectController {
         return this.projectService.getProjects();
     }
 
-    @Get('/project/:name')
+    @Get('/project/:projectName')
     @ApiOkResponse({type: ProjectDetailScheme})
     async getProject(
-        @Param('name') name: string,
+        @Param('projectName') name: string,
     ) {
         return this.projectService.getProject(name);
     }
 
-    @Get('/model/:id')
-    @ApiOkResponse({type: ModelScheme, isArray: true})
-    async getModel(
-        @Param('id') id: string,
-    ) {
-        return this.modelService.getModelInfo(id);
-    }
-
-    @Post('project/:projectName/module/:moduleName/model')
-    @ApiOkResponse({type: ModelScheme, isArray: true})
+    @Post('/project/:projectName/module/:moduleName/model')
+    @ApiOkResponse({type: ModelScheme})
     async createModel(
         @Param('projectName') projectName: string,
         @Param('moduleName') moduleName: string,
@@ -56,26 +48,20 @@ export class ProjectController {
         return this.modelService.createModel(projectName, moduleName, dto);
     }
 
-    @Post('/model/:id')
-    @ApiOkResponse({type: ModelScheme, isArray: true})
+    @Post('/project/:projectName/module/:moduleName/model/:itemName')
+    @ApiOkResponse({type: ModelScheme})
     async updateModel(
-        @Param('id') id: string,
+        @Param('projectName') projectName: string,
+        @Param('moduleName') moduleName: string,
+        @Param('itemName') itemName: string,
         @Body() dto: ModelSaveDto,
     ) {
-        dto.id = id;
-        return this.modelService.updateModel(dto);
+        dto.name = itemName;
+        return this.modelService.updateModel(projectName, moduleName, dto);
     }
 
-    @Get('/enum/:id')
-    @ApiOkResponse({type: EnumScheme, isArray: true})
-    async getEnum(
-        @Param('id') id: string,
-    ) {
-        return this.enumService.getEnumInfo(id);
-    }
-
-    @Post('project/:projectName/module/:moduleName/enum')
-    @ApiOkResponse({type: EnumScheme, isArray: true})
+    @Post('/project/:projectName/module/:moduleName/enum')
+    @ApiOkResponse({type: EnumScheme})
     async createEnum(
         @Param('projectName') projectName: string,
         @Param('moduleName') moduleName: string,
@@ -84,13 +70,15 @@ export class ProjectController {
         return this.enumService.createEnum(projectName, moduleName, dto);
     }
 
-    @Post('/enum/:id')
-    @ApiOkResponse({type: EnumScheme, isArray: true})
+    @Post('/project/:projectName/module/:moduleName/enum/:itemName')
+    @ApiOkResponse({type: EnumScheme})
     async updateEnum(
-        @Param('id') id: string,
+        @Param('projectName') projectName: string,
+        @Param('moduleName') moduleName: string,
+        @Param('itemName') itemName: string,
         @Body() dto: EnumSaveDto,
     ) {
-        dto.id = id;
-        return this.enumService.updateEnum(dto);
+        dto.name = itemName;
+        return this.enumService.updateEnum(projectName, moduleName, dto);
     }
 }

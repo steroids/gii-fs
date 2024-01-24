@@ -144,6 +144,24 @@ export class ProjectParserService {
         return modules.find(module => module.name === moduleName)?.path;
     }
 
+    public getModelPathByName(projectName: string, moduleName: string, name: string) {
+        return path.join(
+            this.getModulePathByName(projectName, moduleName),
+            'domain',
+            'models',
+            name + '.ts',
+        )
+    }
+
+    public getEnumPathByName(projectName: string, moduleName: string, name: string) {
+        return path.join(
+            this.getModulePathByName(projectName, moduleName),
+            'domain',
+            'models',
+            name + '.ts',
+        )
+    }
+
     public getEntityIdByName(projectName: string, entityName: string) {
         const projectPath = this.getProjectPathByName(projectName);
         const project = this.parseProject(projectPath);

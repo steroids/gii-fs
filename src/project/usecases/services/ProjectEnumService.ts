@@ -61,10 +61,11 @@ export class ProjectEnumService {
         return enumDto;
     }
 
-    public updateEnum(dto: EnumSaveDto) {
-        const prevEnum = this.parseEnum(dto.id);
+    public updateEnum(projectName, moduleName, dto: EnumSaveDto) {
+        const enumPath = this.projectParserService.getEnumPathByName(projectName, moduleName, dto.name);
+        const prevEnum = this.parseEnum(enumPath);
 
-        let fileContent = fs.readFileSync(dto.id).toString();
+        let fileContent = fs.readFileSync(enumPath).toString();
         let ast: any;
         let classNode: any;
         let labelsFunction: any;
@@ -182,9 +183,9 @@ export class ProjectEnumService {
         updateAst();
 
         // Обновляем содержимое файла
-        fs.writeFileSync(dto.id, fileContent);
+        fs.writeFileSync(enumPath, fileContent);
 
-        return this.parseEnum(dto.id);
+        return this.parseEnum(enumPath);
     }
 
     public createEnum(projectName: string, moduleName: string, dto: EnumSaveDto) {

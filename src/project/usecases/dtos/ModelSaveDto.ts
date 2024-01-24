@@ -4,9 +4,6 @@ import {ProjectModelModel} from '../../domain/models/ProjectModelModel';
 
 export class ModelSaveDto {
     @ExtendField(ProjectModelModel)
-    id: string;
-
-    @ExtendField(ProjectModelModel)
     name: string;
 
     @ExtendField(ProjectModelModel, {

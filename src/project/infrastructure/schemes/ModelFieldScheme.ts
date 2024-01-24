@@ -1,8 +1,14 @@
 import {ExtendField} from '@steroidsjs/nest/infrastructure/decorators/fields/ExtendField';
+import {Computable} from '@steroidsjs/nest/infrastructure/decorators/Computable';
 import {ProjectModelFieldModel} from '../../domain/models/ProjectModelFieldModel';
 import {ModelRelationScheme} from './ModelRelationScheme';
+import {StringField} from '@steroidsjs/nest/infrastructure/decorators/fields';
 
 export class ModelFieldScheme {
+    @StringField()
+    @Computable(({item}) => item.name)
+    oldName: string;
+
     @ExtendField(ProjectModelFieldModel)
     name: string;
 

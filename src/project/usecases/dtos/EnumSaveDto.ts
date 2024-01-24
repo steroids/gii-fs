@@ -4,9 +4,6 @@ import {EnumFieldSaveDto} from './EnumFieldSaveDto';
 
 export class EnumSaveDto {
     @ExtendField(ProjectEnumModel)
-    id: string;
-
-    @ExtendField(ProjectEnumModel)
     name: string;
 
     @ExtendField(ProjectEnumModel, {
