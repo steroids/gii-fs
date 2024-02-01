@@ -157,7 +157,7 @@ export class ProjectParserService {
         return path.join(
             this.getModulePathByName(projectName, moduleName),
             'domain',
-            'models',
+            'enums',
             name + '.ts',
         )
     }
