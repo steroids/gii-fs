@@ -124,8 +124,6 @@ export class ProjectEnumService {
                 continue;
             }
 
-            // console.log(fileContent);
-
             const labelProperty = labelsFunction.body.statements[0].expression.properties.find(property => (
                 property.name.expression.name.escapedText === field.oldId
             ));
