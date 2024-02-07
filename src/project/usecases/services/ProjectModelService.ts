@@ -39,6 +39,11 @@ export class ProjectModelService {
                 return false;
             }
 
+            // TODO почему-то если не указать defaultValue, приходит объект, который парсится в null
+            if (initializer?.kind === SyntaxKind.NullKeyword) {
+                return '';
+            }
+
             if (initializer?.kind === SyntaxKind.TrueKeyword) {
                 return true;
             }
@@ -207,6 +212,9 @@ export class ProjectModelService {
         const modelPath = this.projectParserService.getModelPathByName(projectName, moduleName, dto.name);
         const prevModel = this.parseModel(modelPath);
 
+        // Убираем falsy значения
+        dto.fields = dto.fields.map((dtoField) => clearObject(dtoField))
+
         let fileContent = fs.readFileSync(modelPath).toString();
         let ast: any;
         let classNode: any;
@@ -241,12 +249,14 @@ export class ProjectModelService {
         for (const propertyNode of propertyNodes) {
             if (!dto.fields.some(field => field.oldName === propertyNode.name.escapedText)) {
                 fragmentsToRemove.push(
-                    {start: propertyNode.pos, end: propertyNode.end + 1, replacement: ''}, // +1 для переноса строки
+                    {start: propertyNode.pos, end: propertyNode.end, replacement: ''},
                 );
             }
         }
-        fileContent = updateFileContent(fileContent, fragmentsToRemove);
-        updateAst();
+        if (fragmentsToRemove.length) {
+            fileContent = updateFileContent(fileContent, fragmentsToRemove);
+            updateAst();
+        }
 
         // Обновляем существующие поля
         const fieldsToCreate = []
@@ -271,9 +281,9 @@ export class ProjectModelService {
             if (fieldDecorator?.expression?.expression.escapedText !== field.type) {
                 const generatedFieldInfo = this.generateModelField(projectName, moduleName, field);
                 toUpdate.push({
-                    start: fieldNode.pos,
+                    start: fieldNode.pos + 1,
                     end: fieldNode.end,
-                    replacement: generatedFieldInfo.code,
+                    replacement: '\n' + generatedFieldInfo.code,
                 });
                 entitiesToImport.push(...generatedFieldInfo.entitiesToImport);
                 fileContent = updateFileContent(fileContent, toUpdate);
@@ -285,7 +295,7 @@ export class ProjectModelService {
                 toUpdate.push({
                     start: fieldNode.name.pos,
                     end: fieldNode.name.end,
-                    replacement: tab() + field.name,
+                    replacement: '\n' + tab() + field.name,
                 });
             }
 
@@ -307,8 +317,10 @@ export class ProjectModelService {
                 }
             }
 
-            fileContent = updateFileContent(fileContent, toUpdate);
-            updateAst();
+            if (toUpdate.length) {
+                fileContent = updateFileContent(fileContent, toUpdate);
+                updateAst();
+            }
         }
 
         // Создаем новые поля
@@ -323,12 +335,12 @@ export class ProjectModelService {
                 entitiesToImport.push(...modelFieldData.entitiesToImport);
             }
         }
-        if (newContent) {
+        if (newContent.length) {
             fileContent = updateFileContent(fileContent,
                 {
-                    start: lastPropertyNode.end,
-                    end: lastPropertyNode.end,
-                    replacement: '\n' + newContent.join('\n'),
+                    start: lastPropertyNode?.end + 1 || classNode.members.pos,
+                    end: lastPropertyNode?.end + 1 || classNode.members.pos + 1,
+                    replacement: newContent.join('\n') + '\n',
                 },
             );
             updateAst();

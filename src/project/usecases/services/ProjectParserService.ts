@@ -198,7 +198,7 @@ export class ProjectParserService {
     }
 
     public updateFileImports(filePath: string, toImport: {projectEntities: Array<string>, steroidsFields: Array<string>}) {
-        const STEROIDS_FIELDS_IMPORT = '@steroidsjs/nest/infrastructure/decorators/fields';
+        const STEROIDS_FIELDS_IMPORT = '@steroidsjs/nest/src/infrastructure/decorators/fields';
 
         let fileContent = fs.readFileSync(filePath).toString();
         const projectName = this.getProjectNameByEntityPath(filePath);
@@ -248,6 +248,7 @@ export class ProjectParserService {
         fileContent = updateFileContent(fileContent, toRemove);
         updateAst();
 
+        // TODO удалять неиспользуемые декораторы
         const steroidsFields = _uniq([
             ...oldSteroidsFields,
             ...(toImport.steroidsFields || []),
