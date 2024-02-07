@@ -39,7 +39,7 @@ export class ProjectEnumService {
         const labelsFunction = enumNode.members.find(member => member.name.escapedText === LABELS_FUNCTION_NAME);
         if (labelsFunction) {
             for (const member of enumNode.members) {
-                if (!member.name.escapedText || member.parameters) {
+                if (!member.name?.escapedText || member.parameters) {
                     continue;
                 }
                 const fieldDto = new ProjectEnumFieldModel();
@@ -47,7 +47,7 @@ export class ProjectEnumService {
 
                 if (labelsFunction.body?.statements?.[0]?.expression?.properties) {
                     const labelProperty = labelsFunction.body.statements[0].expression.properties.find(property => (
-                        property.name.expression.name.escapedText === fieldDto.id
+                        property.name.expression?.name?.escapedText === fieldDto.id
                     ));
                     if (labelProperty) {
                         fieldDto.label = labelProperty.initializer.text;
@@ -109,6 +109,7 @@ export class ProjectEnumService {
                 );
             }
         }
+
         fileContent = updateFileContent(fileContent, fragmentsToRemove);
         updateAst();
 
@@ -125,7 +126,7 @@ export class ProjectEnumService {
             }
 
             const labelProperty = labelsFunction.body.statements[0].expression.properties.find(property => (
-                property.name.expression.name.escapedText === field.oldId
+                property.name.expression?.name?.escapedText === field.oldId
             ));
 
             if (fieldIdNode.name.escapedText !== field.id) {
@@ -148,7 +149,7 @@ export class ProjectEnumService {
                 );
             }
 
-            if (labelProperty.initializer.text !== field.label) {
+            if (labelProperty && labelProperty.initializer.text !== field.label) {
                 toUpdate.push(
                     {start: labelProperty.initializer.pos + 2, end: labelProperty.initializer.end - 1, replacement: field.label},
                 );
@@ -174,11 +175,29 @@ export class ProjectEnumService {
             newDeclarations.push(`\n${tab()}static ${field.id} = '${field.id.toLowerCase()}';`);
             newLabels.push(`${tab(3)}[this.${field.id}]: '${field.label}',`);
         }
-        fileContent = updateFileContent(fileContent, [
-            {start: lastFieldNode.end + 1, end: lastFieldNode.end, replacement: newDeclarations.join('\n')},
-            {start: lastLabelNode.end + 1, end: lastLabelNode.end + 1, replacement: newLabels.join('\n') + '\n'},
-        ]);
-        updateAst();
+
+        const toCreate = [];
+
+        if (newDeclarations.length) {
+            toCreate.push({
+                start: lastFieldNode?.end + 1 || classNode.members.pos,
+                end: lastFieldNode?.end || classNode.members.pos + 1,
+                replacement: newDeclarations.join('\n') + (lastFieldNode?.end ? '' : '\n'),
+            })
+        }
+
+        if (newLabels.length) {
+            toCreate.push({
+                start: lastLabelNode?.end + 1 || labelsFunction.body.statements[0].expression.properties.pos,
+                end: lastLabelNode?.end + 1 || labelsFunction.body.statements[0].expression.properties.pos + 1,
+                replacement: newLabels.join('\n') + '\n',
+            })
+        }
+
+        if (toCreate.length) {
+            fileContent = updateFileContent(fileContent, toCreate);
+            updateAst();
+        }
 
         // Обновляем содержимое файла
         fs.writeFileSync(enumPath, fileContent);
