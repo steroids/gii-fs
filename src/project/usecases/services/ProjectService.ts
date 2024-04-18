@@ -1,57 +1,83 @@
 import {ConfigService} from '@nestjs/config';
 import * as fs from 'fs';
-import {UserException} from '@steroidsjs/nest/usecases/exceptions';
-import {IConfig} from '../interfaces/IConfig';
-import {ProjectScheme} from '../../infrastructure/schemes/ProjectScheme';
-import {ProjectDetailScheme} from '../../infrastructure/schemes/ProjectDetailScheme';
-import {ProjectParserService} from './ProjectParserService';
-import {DataMapper} from '@steroidsjs/nest/usecases/helpers/DataMapper';
-import {ProjectModelService} from './ProjectModelService';
-import {ProjectEnumService} from './ProjectEnumService';
-import {ModuleDetailScheme} from '../../infrastructure/schemes/ModuleDetailScheme';
+import * as gitDiff from 'git-diff';
+import {findInProjectStructure, IGiiProject, parseProject} from '../parsers/project';
+import {loadFile, saveFile} from '../parsers/file';
+import {parse, generate} from '../parsers';
+
+export interface IConfig {
+    projects: string[],
+}
 
 export class ProjectService {
-    private configRoute: string;
-
     constructor(
-        protected projectParserService: ProjectParserService,
-        protected projectModelService: ProjectModelService,
-        protected projectEnumService: ProjectEnumService,
         private configService: ConfigService,
     ) {
-        this.configRoute = configService.get('project.configRoute');
     }
 
-    public async getProjects(): Promise<ProjectScheme[]> {
+    public async getProjects() {
         const projects = [];
-        try {
-            const projectsConfig: IConfig = JSON.parse(fs.readFileSync(this.configRoute).toString());
-            for (const projectPath of projectsConfig.projects) {
-                try {
-                    projects.push(this.projectParserService.parseProject(projectPath));
-                } catch (e) {
-                    console.error(`Не удалось прочитать проект ${projectPath}`);
-                }
+        for (const projectPath of this.getConfig().projects) {
+            try {
+                projects.push(parseProject(projectPath));
+            } catch (e) {
+                console.error(`Не удалось прочитать проект ${projectPath}`);
+                console.error(e);
             }
-        } catch (e) {
-            throw new UserException('Некорректный формат JSON для конфига!');
         }
 
         return projects;
     }
 
-    public async getProject(name): Promise<ProjectDetailScheme[]> {
-        const projects = await this.getProjects();
-        const project = projects.find(item => item.name === name);
+    public async getProjectStructureItem(projectName, id) {
+        const project = await this.getProject(projectName);
+        const item = findInProjectStructure(project.structure, id);
 
-        return DataMapper.create(ProjectDetailScheme, {
-            ...project,
-            modules: (project.modules || []).map(module => DataMapper.create(ModuleDetailScheme, {
-                ...module,
-                models: (module.models || []).map(item => this.projectModelService.getModelInfo(item.id)),
-                enums: (module.enums || []).map(item => this.projectEnumService.getEnumInfo(item.id)),
-            }))
-        });
+        const file = loadFile(project.path, item.id);
+        return parse(project, item.type, file);
     }
 
+    public async previewProjectStructureItem(projectName, id, dto) {
+        const project = await this.getProject(projectName);
+        const item = findInProjectStructure(project.structure, id);
+
+        const diffs = [];
+        const file = loadFile(project.path, item.id);
+        const newFiles = generate(project, item.type, file, dto);
+        for (const newFile of newFiles) {
+            const prevFile = loadFile(project.path, newFile.id);
+
+            diffs.push('--- ' + prevFile.id + '\n+++ ' + newFile.id + '\n' + gitDiff(
+                prevFile.code,
+                newFile.code,
+                {
+                    flags: '--unified=100',
+                },
+            ));
+        }
+
+        return {
+            diff: diffs.join('\n\n'),
+        };
+    }
+
+    public async saveProjectStructureItem(projectName, id, dto) {
+        const project = await this.getProject(projectName);
+        const item = findInProjectStructure(project.structure, id);
+
+        const file = loadFile(project.path, item.id);
+        const newFiles = generate(project, item.type, file, dto);
+        for (const newFile of newFiles) {
+            saveFile(newFile);
+        }
+    }
+
+    private async getProject(name): Promise<IGiiProject> {
+        const projects = await this.getProjects();
+        return projects.find(item => item.name === name);
+    }
+
+    private getConfig(): IConfig {
+        return JSON.parse(fs.readFileSync(this.configService.get('project.configRoute')).toString());
+    }
 }

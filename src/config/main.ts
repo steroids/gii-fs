@@ -15,8 +15,8 @@ export default () => ({
         configRoute: process.argv.at(-1).endsWith('.json')
             ? process.argv.at(-1)
             : (fs.existsSync(path.resolve(require('os').homedir(), 'gii-fs.json'))
-                    ? path.resolve(require('os').homedir(), 'gii-fs.json')
-                    : path.resolve(process.cwd(), 'gii-fs.json')
-            )
-    }
+                ? path.resolve(require('os').homedir(), 'gii-fs.json')
+                : path.resolve(process.cwd(), 'gii-fs.json')
+            ),
+    },
 });

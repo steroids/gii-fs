@@ -1,9 +1,29 @@
-export function tab(count: number = 1) {
+import * as ts from 'typescript';
+import * as path from 'path';
+import {ScriptTarget} from 'typescript';
+import {IGiiFile} from '../parsers/file';
+import {IGiiImport} from '../parsers/imports';
+
+export type IGeneratedCode = [string, IGiiImport[]];
+
+export function tab(count = 1) {
     return '    '.repeat(count);
+}
+
+export function basename(name) {
+    return path.basename(name).replace(/\.[^.]+$/, '');
 }
 
 export function strReplaceAt(str: string, indexStart: number, indexEnd: number, replacement: string) {
     return str.substring(0, indexStart) + replacement + str.substring(indexEnd);
+}
+
+export function createAst(file: IGiiFile, target: ScriptTarget = ts.ScriptTarget.Latest) {
+    return ts.createSourceFile(
+        `thisFileWillNotBeCreated${Date.now()}.ts`,
+        file.code,
+        target,
+    ).statements;
 }
 
 interface IFragmentToUpdate {
@@ -26,23 +46,7 @@ export function updateFileContent(fileContent, fragmentsToUpdate: IFragmentToUpd
             end + sizeOffset,
             fragmentToUpdate.replacement,
         );
-        sizeOffset = sizeOffset + (fragmentToUpdate.replacement.length - (end - start - 1))
+        sizeOffset += (fragmentToUpdate.replacement.length - (end - start - 1));
     }
     return fileContent;
-}
-
-export function clearObject(object: Object): any {
-    for (const field in object) {
-        if (typeof object[field] === 'object' && !Array.isArray(object[field])) {
-            object[field] = clearObject(object[field]);
-            if (Object.keys(object[field]).length === 0) {
-                delete object[field];
-            }
-        }
-        if (typeof object[field] === 'undefined') {
-            delete object[field];
-        }
-    }
-
-    return object;
 }
