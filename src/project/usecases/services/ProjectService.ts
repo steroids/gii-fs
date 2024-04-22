@@ -37,6 +37,17 @@ export class ProjectService {
         return parse(project, item.type, file);
     }
 
+    public async getProjectStructureItems(projectName: string, ids: string[]) {
+        const project = await this.getProject(projectName);
+
+        return ids.map(id => {
+            const item = findInProjectStructure(project.structure, id);
+
+            const file = loadFile(project.path, item.id);
+            return parse(project, item.type, file);
+        })
+    }
+
     public async previewProjectStructureItem(projectName, id, dto) {
         const project = await this.getProject(projectName);
         const item = findInProjectStructure(project.structure, id);
