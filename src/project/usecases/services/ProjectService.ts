@@ -37,7 +37,7 @@ export class ProjectService {
         return parse(project, item.type, file);
     }
 
-    public async getProjectStructureItems(projectName: string, ids: string[]) {
+    public async getProjectStructureItems(projectName: string, ids: string[] = []) {
         const project = await this.getProject(projectName);
 
         return ids.map(id => {

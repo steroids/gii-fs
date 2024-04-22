@@ -27,7 +27,7 @@ export class ProjectController {
     @Get('/project/:projectName/structures')
     async getStructureItems(
         @Param('projectName') projectName: string,
-        @Query('id') ids: string[],
+        @Query('ids') ids: string[],
     ) {
         return this.projectService.getProjectStructureItems(projectName, ids);
     }

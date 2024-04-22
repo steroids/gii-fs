@@ -1,6 +1,6 @@
 {
   "name": "@steroidsjs/gii-fs",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "FS Developer Server",
   "author": "Vladimir Kozhin <hello@kozhindev.com>",
   "repository": {
