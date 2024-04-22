@@ -2,8 +2,9 @@ import {SyntaxKind} from 'typescript';
 import {generateObjectValue, parseObjectValue} from './objectValue';
 import {IGeneratedCode, tab} from '../helpers';
 import {SteroidsFieldsEnum} from '../../domain/enums/SteroidsFieldsEnum';
-import {IGiiFile} from './file';
+import {IGiiFile, loadFile} from './file';
 import {IGiiProject} from './project';
+import {parseDto} from './dto';
 
 export interface IGiiDtoField {
     type: 'BooleanField'
@@ -12,6 +13,7 @@ export interface IGiiDtoField {
         | 'EnumField'
         | 'ExtendField'
         | 'RelationField'
+        | 'RelationIdField'
         | 'IntegerField'
         | 'CreateTimeField'
         | 'DateField'
@@ -65,16 +67,26 @@ export interface IGiiDtoField {
         // ManyToMany
         tableName?: string,
     },
+
+    // RelationIdField
+    relationName?: string,
 }
 
 export interface IGiiDtoRawField {
     name: string,
     oldName?: string,
+    jsType?: string,
     decorator: string,
     decoratorArgs?: string[],
     params: Record<string, any>,
     isArray?: boolean,
 }
+
+export const findExtendField = (project, extendClassFileId, fieldName) => {
+    const modelFile = loadFile(project.path, extendClassFileId);
+    const model = parseDto(project, modelFile);
+    return model.fields.find(({name}) => fieldName === name);
+};
 
 export function parseDtoField(project: IGiiProject, file: IGiiFile, tsMember: any): IGiiDtoRawField | null {
     const handler = decorator => decorator.expression?.expression?.escapedText?.includes('Field');
@@ -117,7 +129,7 @@ export function parseDtoField(project: IGiiProject, file: IGiiFile, tsMember: an
 
 export function generateDtoField(project: IGiiProject, data: IGiiDtoRawField): IGeneratedCode {
     const imports = [];
-    const type = SteroidsFieldsEnum.getFieldType(data.decorator) + (data.isArray ? '[]' : '');
+    const type = data.jsType + (data.isArray ? '[]' : '');
 
     let params = '';
     for (const key of Object.keys(data.params)) {

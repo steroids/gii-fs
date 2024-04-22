@@ -5,6 +5,14 @@ import {parseImports} from './imports';
 import {IGiiFile} from './file';
 import {IGiiProject} from './project';
 
+export class ObjectValueExpression {
+    public value;
+
+    constructor(value) {
+        this.value = value;
+    }
+}
+
 export function parseObjectValue(project: IGiiProject, file: IGiiFile, initializer) {
     if (initializer?.kind === SyntaxKind.FalseKeyword) {
         return false;
@@ -41,14 +49,10 @@ export function parseObjectValue(project: IGiiProject, file: IGiiFile, initializ
             if (file.name === className) {
                 return file.path;
             }
-            const importItem = parseImports(file)
+            const importItem = parseImports(project, file)
                 .find(item => item.names.includes(className) || item.default === className);
             if (importItem) {
-                const basePath = path.join(project.path, '/');
-                if (importItem.path.startsWith(basePath)) {
-                    return importItem.path.substring(basePath.length);
-                }
-                return importItem.path;
+                return importItem.giiId;
             }
             throw new Error('Not found path for Identifier: ' + className + '. File: ' + file.path);
         }
@@ -64,9 +68,12 @@ export function parseObjectValue(project: IGiiProject, file: IGiiFile, initializ
 
 export function generateObjectValue(project: IGiiProject, optionName: string, fieldValue: any): IGeneratedCode {
     return [
-        typeof fieldValue === 'string'
-            ? fieldValue
-            : String(fieldValue),
+        fieldValue instanceof ObjectValueExpression
+            ? fieldValue.value
+            : (typeof fieldValue === 'string'
+                ? "'" + fieldValue + "'"
+                : String(fieldValue)
+            ),
         [],
     ];
 }

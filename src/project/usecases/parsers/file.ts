@@ -1,23 +1,40 @@
-import {basename, dirname, normalize} from 'path';
+import {basename, dirname, normalize, extname, join} from 'path';
 import * as fs from 'fs';
 import * as path from 'path';
-import {IGiiProject} from './project';
 
-export interface IGiiFile {
+export interface IGiiItem {
     id: string,
-    name: string,
     path: string,
+    name: string,
+    ext: string,
+}
+
+export interface IGiiFile extends IGiiItem {
     code: string,
 }
 
-export function loadFile(projectPath: string, itemId: string): IGiiFile {
-    const filePath = path.join(projectPath, itemId);
+export function getGiiItemFromAbsolutePath(projectPath: string, absolutePath: string): IGiiItem {
+    absolutePath = normalize(absolutePath);
+
+    if (!absolutePath.startsWith(projectPath)) {
+        throw new Error('Wrong file, not in project: ' + absolutePath);
+    }
+
+    const id = absolutePath.substring(path.join(projectPath, '/').length);
     return {
-        id: itemId,
-        path: normalize(filePath),
-        name: basename(filePath).replace(/\.[^.]+$/, ''),
-        code: fs.existsSync(filePath)
-            ? fs.readFileSync(filePath).toString()
+        id,
+        path: absolutePath,
+        name: basename(id).replace(/\.[^.]+$/, ''),
+        ext: extname(id),
+    };
+}
+
+export function loadFile(projectPath: string, itemId: string): IGiiFile {
+    const absolutePath = path.join(projectPath, itemId);
+    return {
+        ...getGiiItemFromAbsolutePath(projectPath, absolutePath),
+        code: fs.existsSync(absolutePath)
+            ? fs.readFileSync(absolutePath).toString()
             : null,
     };
 }

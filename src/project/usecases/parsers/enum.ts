@@ -207,7 +207,7 @@ export function generateEnum(project: IGiiProject, file: IGiiFile, data: IGiiEnu
     }
 
     file.code = replaceImports(project, file, [
-        importDefault('@steroidsjs/nest/domain/base/BaseEnum', 'BaseEnum'),
+        importDefault('node_modules/@steroidsjs/nest/domain/base/BaseEnum', 'BaseEnum'),
     ]);
 
     return [file];

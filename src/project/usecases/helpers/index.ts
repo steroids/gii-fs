@@ -14,6 +14,10 @@ export function basename(name) {
     return path.basename(name).replace(/\.[^.]+$/, '');
 }
 
+export function trimFileExtension(value) {
+    return value.replace(/\.[^.]+$/, '');
+}
+
 export function strReplaceAt(str: string, indexStart: number, indexEnd: number, replacement: string) {
     return str.substring(0, indexStart) + replacement + str.substring(indexEnd);
 }

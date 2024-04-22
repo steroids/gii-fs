@@ -71,7 +71,7 @@ export function parseDto(project: IGiiProject, file: IGiiFile): IGiiDto {
 }
 
 export function generateDto(project: IGiiProject, file: IGiiFile, dto: IGiiDto): IGiiFile[] {
-    const [dtoFields, dtoFieldsImports] = SteroidsFieldsEnum.toCodeParams(dto.fields as any);
+    const [dtoFields, dtoFieldsImports] = SteroidsFieldsEnum.toCodeParams(project, file.id, dto.fields as any || []);
 
     if (!file.code) {
         file.code = `\n\nexport class ${dto.name} {\n}`;
@@ -120,7 +120,7 @@ export function generateDto(project: IGiiProject, file: IGiiFile, dto: IGiiDto):
     const fieldsToCreate = [];
     for (const rawField of dtoFields) {
         imports.push(
-            importWithName('@steroidsjs/nest/infrastructure/decorators/fields', rawField.decorator),
+            importWithName('node_modules/@steroidsjs/nest/infrastructure/decorators/fields/index.js', rawField.decorator),
         );
 
         const toUpdate = [];
@@ -177,7 +177,7 @@ export function generateDto(project: IGiiProject, file: IGiiFile, dto: IGiiDto):
             .at(-1)
             ?.end
             || classNode.members?.[0]?.end
-            || (classNode.heritageClauses.end ? classNode.heritageClauses.end + 2 : null)
+            || (classNode.heritageClauses?.end ? classNode.heritageClauses.end + 2 : null)
             || classNode.name.end + 2;
         file.code = updateFileContent(file.code,
             {
@@ -210,7 +210,7 @@ export function generateDto(project: IGiiProject, file: IGiiFile, dto: IGiiDto):
                 {
                     start: jsDocPos,
                     end: jsDocPos,
-                    replacement: ` * @${DTO_TAG_EXTEND_MODEL} ${extendedModel.name}\n`,
+                    replacement: ` * @${DTO_TAG_EXTEND_MODEL} ${basename(extendedModel.name)}\n`,
                 });
             updateAst();
         }

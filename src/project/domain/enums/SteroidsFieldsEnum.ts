@@ -1,10 +1,18 @@
 import BaseEnum from '@steroidsjs/nest/domain/base/BaseEnum';
 import * as path from 'path';
 import {
+    findExtendField,
     IGiiDtoField,
     IGiiDtoRawField,
 } from '../../usecases/parsers/dtoField';
 import {IGiiImport, importWithName} from '../../usecases/parsers/imports';
+import {basename} from '../../usecases/helpers';
+import {ObjectValueExpression} from '../../usecases/parsers/objectValue';
+import {findInProjectStructure, findManyInProjectStructure, IGiiProject} from '../../usecases/parsers/project';
+import {loadFile} from '../../usecases/parsers/file';
+import {parseDto, PARSER_DTO} from '../../usecases/parsers/dto';
+import {PARSER_MODULE} from '../../usecases/parsers/module';
+import {findRelatedDtoForModelRelationField, PARSER_MODEL} from '../../usecases/parsers/model';
 
 export class SteroidsFieldsEnum extends BaseEnum {
     static BOOLEAN_FIELD = 'BooleanField';
@@ -55,36 +63,16 @@ export class SteroidsFieldsEnum extends BaseEnum {
 
     static UPDATE_TIME_FIELD = 'UpdateTimeField';
 
-    static getFieldType(id: string) {
-        switch (id) {
-            case this.INTEGER_FIELD:
-            case this.DECIMAL_FIELD:
-            case this.COORDINATE_FIELD:
-            case this.PRIMARY_KEY_FIELD:
-            case this.RELATION_ID_FIELD:
-                return 'number';
-            case this.RELATION_FIELD:
-                return 'object';
-            case this.COMPUTABLE_FIELD:
-            case this.EXTEND_FIELD:
-                return 'any';
-            case this.BOOLEAN_FIELD:
-                return 'boolean';
-            default:
-                return 'string';
-        }
-    }
-
     static singleKeys(decorator) {
         const singleKeys = [
             'label',
             'hint',
             'example',
             'defaultValue',
-            'isNullable',
-            'isNoColumn',
-            'isRequired',
-            'isUnique',
+            'nullable',
+            'noColumn',
+            'required',
+            'unique',
             'isArray',
         ];
 
@@ -143,6 +131,8 @@ export class SteroidsFieldsEnum extends BaseEnum {
                     break;
 
                 case this.RELATION_ID_FIELD:
+                    fieldData.relationName = rawField.params?.relationName;
+                    result.push(fieldData);
                     break;
 
                 case this.EXTEND_FIELD:
@@ -159,13 +149,18 @@ export class SteroidsFieldsEnum extends BaseEnum {
         return result;
     }
 
-    static toCodeParams(fields: IGiiDtoField[]): [IGiiDtoRawField[], IGiiImport[]] {
+    static toCodeParams(project: IGiiProject, fileId: string, fields: IGiiDtoField[]): [IGiiDtoRawField[], IGiiImport[]] {
         const result: IGiiDtoRawField[] = [];
         const imports: IGiiImport[] = [];
         for (const field of fields) {
+            if (!field?.name) {
+                continue;
+            }
+
             const dtoField: IGiiDtoRawField = {
                 name: field.name,
                 oldName: field.oldName || field.name,
+                jsType: 'string',
                 decorator: field.type,
                 params: {},
                 isArray: false, // TODO
@@ -179,21 +174,34 @@ export class SteroidsFieldsEnum extends BaseEnum {
             }
 
             switch (dtoField.decorator) {
+                case this.INTEGER_FIELD:
+                case this.DECIMAL_FIELD:
+                case this.COORDINATE_FIELD:
+                case this.PRIMARY_KEY_FIELD:
+                case this.RELATION_ID_FIELD:
+                    dtoField.jsType = 'number';
+                    break;
+
+                case this.BOOLEAN_FIELD:
+                    dtoField.jsType = 'boolean';
+                    break;
+
                 case this.ENUM_FIELD:
                     const enumClass = field.enum;
-                    dtoField.params.enum = path.basename(enumClass, '.ts');
+                    dtoField.params.enum = basename(enumClass);
                     imports.push(importWithName(enumClass, dtoField.params.enum));
                     break;
 
                 case this.RELATION_FIELD:
                     const relation = field.relation;
-                    const relationClassName = path.basename(relation.relationClass, '.ts');
+                    const relationClassName = basename(relation.relationClass);
                     dtoField.isArray = ['OneToMany', 'ManyToMany'].includes(relation.type);
                     dtoField.params = {
                         ...dtoField.params,
                         type: relation.type,
-                        relationClass: '() => ' + relationClassName,
+                        relationClass: new ObjectValueExpression('() => ' + relationClassName),
                     };
+                    dtoField.jsType = relationClassName;
                     imports.push(importWithName(relation.relationClass, relationClassName));
 
                     if (relation.type === 'ManyToMany' && relation.tableName) {
@@ -210,6 +218,7 @@ export class SteroidsFieldsEnum extends BaseEnum {
                             name: dtoField.name + 'Id',
                             oldName: dtoField.name + 'Id',
                             decorator: this.RELATION_ID_FIELD,
+                            jsType: relationClassName,
                             isArray: false,
                             params: {
                                 label: dtoField.params.label,
@@ -219,11 +228,41 @@ export class SteroidsFieldsEnum extends BaseEnum {
                     }
                     break;
 
+                case this.COMPUTABLE_FIELD:
+                    dtoField.jsType = 'any'; // TODO
+                    break;
+
                 case this.EXTEND_FIELD:
-                    const extendClass = field.extend;
-                    const extendClassName = path.basename(extendClass, '.ts');
+                    const extendClassFileId = field.extend;
+
+                    // Получаем наследуемое поле
+                    const extendField = findExtendField(project, extendClassFileId, field.name);
+
+                    // Получаем тип наследуемого поля
+                    const modelFieldRaw: IGiiDtoRawField = this.toCodeParams(project, extendClassFileId, [extendField])?.[0]?.[0];
+                    if (modelFieldRaw) {
+                        dtoField.jsType = modelFieldRaw.jsType;
+                    }
+
+                    // Если это связь (RelationField) и в dto не указан relationClass, то нужно найти подходящую dto
+                    if (extendField?.type === this.RELATION_FIELD && extendField.relation.relationClass && !field?.relation?.relationClass) {
+                        const relatedDto = findRelatedDtoForModelRelationField(
+                            project,
+                            basename(fileId), // example: ProjectRepositorySaveDto
+                            basename(field.extend), // example: ProjectRepositoryModel
+                            basename(extendField.relation.relationClass), // example: ProjectModel
+                        ); // example dto name in result: ProjectSaveDto
+                        if (relatedDto) {
+                            const dtoClassName = basename(relatedDto.name);
+                            dtoField.jsType = dtoClassName;
+                            dtoField.params.relationClass = new ObjectValueExpression('() => ' + dtoClassName);
+                            imports.push(importWithName(relatedDto.id, dtoClassName));
+                        }
+                    }
+
+                    const extendClassName = basename(extendClassFileId);
                     dtoField.decoratorArgs = [extendClassName];
-                    imports.push(importWithName(extendClass, extendClassName));
+                    imports.push(importWithName(extendClassFileId, extendClassName));
                     break;
 
                 default:
@@ -233,6 +272,9 @@ export class SteroidsFieldsEnum extends BaseEnum {
             result.push(dtoField);
         }
 
-        return [result, imports];
+        return [
+            result,
+            imports,
+        ];
     }
 }

@@ -1148,10 +1148,10 @@
   dependencies:
     uuid "9.0.0"
 
-"@steroidsjs/nest@1.7.23":
-  version "1.7.23"
-  resolved "https://registry.yarnpkg.com/@steroidsjs/nest/-/nest-1.7.23.tgz#a7ed5844be1f62a5972f5acb390bd3f533bd95c9"
-  integrity sha512-5/gLSt4RtPZiqy4B1fyE1IrJHOhELXCOQENShFTaxI6h9MTiUXg5UK67P7Lpu3ZyAxW8rZhFiMLyZvv4VO3SZg==
+"@steroidsjs/nest@1.7.39":
+  version "1.7.39"
+  resolved "https://registry.yarnpkg.com/@steroidsjs/nest/-/nest-1.7.39.tgz#9dc396b6ed3d502f0680a6db946c4f934b8c567e"
+  integrity sha512-6c46iwB8XDC8mLtZliGHs+GwCOL/eCLL+pvcElK9KA00ZXcBfng+kcu3K+igHH5VPaFQTsjDrgIiYZWBLSzpvA==
   dependencies:
     "@dbml/core" "^2.4.4"
     "@nestjs/cli" "^9.1.9"
@@ -1165,6 +1165,7 @@
     "@sqltools/formatter" "^1.2.5"
     "@steroidsjs/nest-typeorm" "^9.0.3"
     "@steroidsjs/typeorm" "^0.3.11"
+    "@supercharge/request-ip" "^1.2.0"
     bluebird "^3.7.2"
     body-parser "^1.20.1"
     class-transformer "^0.5.1"
@@ -1199,6 +1200,11 @@
     uuid "^8.3.2"
     xml2js "^0.4.23"
     yargs "^17.3.1"
+
+"@supercharge/request-ip@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@supercharge/request-ip/-/request-ip-1.2.0.tgz#b8a8164322e09de3fa9b6f556885795c4841a7d4"
+  integrity sha512-wlt6JW69MHqLY2M6Sm/jVyCojNRKq2CBvwH0Hbx24SFhDQQGkgEjeKxVutDxHSyrWixFaOSLXC27euzxijhyMQ==
 
 "@tokenizer/token@^0.3.0":
   version "0.3.0"

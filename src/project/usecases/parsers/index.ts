@@ -1,6 +1,7 @@
 import {generateModel, parseModel, PARSER_MODEL} from './model';
 import {generateDto, parseDto, PARSER_DTO} from './dto';
 import {generateEnum, parseEnum, PARSER_ENUM} from './enum';
+import {generatePermissions, parsePermissions, PARSER_PERMISSIONS} from './permissions';
 import {IGiiFile} from './file';
 import {IGiiProject} from './project';
 
@@ -8,6 +9,7 @@ const parsers = {
     [PARSER_MODEL]: [parseModel, generateModel],
     [PARSER_DTO]: [parseDto, generateDto],
     [PARSER_ENUM]: [parseEnum, generateEnum],
+    [PARSER_PERMISSIONS]: [parsePermissions, generatePermissions],
 };
 
 export const parse = (project: IGiiProject, type: string, file: IGiiFile) => {

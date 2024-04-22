@@ -5,6 +5,7 @@ import {PARSER_MODEL} from './model';
 import {PARSER_ENUM} from './enum';
 import {PARSER_DTO} from './dto';
 import {PARSER_MODULE} from './module';
+import {PARSER_PERMISSIONS} from './permissions';
 
 export interface IGiiStructureItem {
     id: string,
@@ -97,6 +98,10 @@ const STRUCTURE_NEST_BACKEND = {
                                     // type: PARSER_DTO,
                                 },
                             ],
+                        },
+                        {
+                            pattern: 'permissions.ts',
+                            type: PARSER_PERMISSIONS,
                         },
                     ],
                 },

@@ -1,6 +1,7 @@
 import {ConfigService} from '@nestjs/config';
 import * as fs from 'fs';
 import * as gitDiff from 'git-diff';
+import * as path from 'path';
 import {findInProjectStructure, IGiiProject, parseProject} from '../parsers/project';
 import {loadFile, saveFile} from '../parsers/file';
 import {parse, generate} from '../parsers';
@@ -38,17 +39,14 @@ export class ProjectService {
     }
 
     public async previewProjectStructureItem(projectName, id, dto) {
-        const project = await this.getProject(projectName);
-        const item = findInProjectStructure(project.structure, id);
-
         const diffs = [];
-        const file = loadFile(project.path, item.id);
-        const newFiles = generate(project, item.type, file, dto);
+        const project = await this.getProject(projectName);
+        const newFiles = this.generateFromItem(project, id, dto);
         for (const newFile of newFiles) {
             const prevFile = loadFile(project.path, newFile.id);
 
             diffs.push('--- ' + prevFile.id + '\n+++ ' + newFile.id + '\n' + gitDiff(
-                prevFile.code,
+                prevFile?.code || '',
                 newFile.code,
                 {
                     flags: '--unified=100',
@@ -63,13 +61,30 @@ export class ProjectService {
 
     public async saveProjectStructureItem(projectName, id, dto) {
         const project = await this.getProject(projectName);
-        const item = findInProjectStructure(project.structure, id);
-
-        const file = loadFile(project.path, item.id);
-        const newFiles = generate(project, item.type, file, dto);
+        const newFiles = this.generateFromItem(project, id, dto);
         for (const newFile of newFiles) {
             saveFile(newFile);
         }
+    }
+
+    private generateFromItem(project, id, dto) {
+        const item = findInProjectStructure(project.structure, id);
+
+        let itemId;
+        let itemType;
+        if (item && item.createType) {
+            itemId = path.join(item.id, dto.name + '.ts');
+            itemType = item.createType;
+        } else if (item) {
+            itemId = item.id;
+            itemType = item.type;
+        } else {
+            itemId = dto.structureId || path.basename(id);
+            itemType = dto.structureType;
+        }
+
+        const file = loadFile(project.path, itemId);
+        return generate(project, itemType, file, dto);
     }
 
     private async getProject(name): Promise<IGiiProject> {
