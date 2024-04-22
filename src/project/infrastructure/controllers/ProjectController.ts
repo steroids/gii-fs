@@ -24,6 +24,14 @@ export class ProjectController {
         return this.projectService.getProjectStructureItem(projectName, id);
     }
 
+    @Get('/project/:projectName/structures')
+    async getStructureItems(
+        @Param('projectName') projectName: string,
+        @Query('ids') ids: string[],
+    ) {
+        return this.projectService.getProjectStructureItems(projectName, ids);
+    }
+
     @Post('/project/:projectName/structure/preview')
     async previewStructureItem(
         @Param('projectName') projectName: string,
