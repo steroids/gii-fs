@@ -1,9 +1,9 @@
 import {SyntaxKind} from 'typescript';
 import * as path from 'path';
-import {IGeneratedCode} from '../helpers';
+import {IGeneratedCode} from '../../helpers';
 import {parseImports} from './imports';
-import {IGiiFile} from './file';
-import {IGiiProject} from './project';
+import {IGiiFile} from '../file';
+import {IGiiProject} from '../project';
 
 export function parseObjectValue(project: IGiiProject, file: IGiiFile, initializer) {
     if (initializer?.kind === SyntaxKind.FalseKeyword) {
