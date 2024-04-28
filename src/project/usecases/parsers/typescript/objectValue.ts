@@ -1,17 +1,9 @@
 import {SyntaxKind} from 'typescript';
 import * as path from 'path';
-import {IGeneratedCode} from '../helpers';
+import {IGeneratedCode} from '../../helpers';
 import {parseImports} from './imports';
-import {IGiiFile} from './file';
-import {IGiiProject} from './project';
-
-export class ObjectValueExpression {
-    public value;
-
-    constructor(value) {
-        this.value = value;
-    }
-}
+import {IGiiFile} from '../file';
+import {IGiiProject} from '../project';
 
 export function parseObjectValue(project: IGiiProject, file: IGiiFile, initializer) {
     if (initializer?.kind === SyntaxKind.FalseKeyword) {
@@ -53,10 +45,14 @@ export function parseObjectValue(project: IGiiProject, file: IGiiFile, initializ
             if (file.name === className) {
                 return file.path;
             }
-            const importItem = parseImports(project, file)
+            const importItem = parseImports(file)
                 .find(item => item.names.includes(className) || item.default === className);
             if (importItem) {
-                return importItem.giiId;
+                const basePath = path.join(project.path, '/');
+                if (importItem.path.startsWith(basePath)) {
+                    return importItem.path.substring(basePath.length);
+                }
+                return importItem.path;
             }
             throw new Error('Not found path for Identifier: ' + className + '. File: ' + file.path);
         }
@@ -72,12 +68,9 @@ export function parseObjectValue(project: IGiiProject, file: IGiiFile, initializ
 
 export function generateObjectValue(project: IGiiProject, optionName: string, fieldValue: any): IGeneratedCode {
     return [
-        fieldValue instanceof ObjectValueExpression
-            ? fieldValue.value
-            : (typeof fieldValue === 'string'
-                ? "'" + fieldValue + "'"
-                : String(fieldValue)
-            ),
+        typeof fieldValue === 'string'
+            ? fieldValue
+            : String(fieldValue),
         [],
     ];
 }
