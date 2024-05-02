@@ -1,29 +1,51 @@
 import {SyntaxKind} from 'typescript';
+import {has as _has} from 'lodash';
 import * as path from 'path';
-import {IGeneratedCode} from '../../helpers';
+import {IGeneratedCode, tab} from '../../helpers';
 import {parseImports} from './imports';
 import {IGiiFile} from '../file';
 import {IGiiProject} from '../project';
 
+export class ObjectValueExpression {
+    public value;
+
+    constructor(value) {
+        this.value = value;
+    }
+
+    toJSON() {
+        return {__valueExpression: this.value};
+    }
+}
+
 export function parseObjectValue(project: IGiiProject, file: IGiiFile, initializer) {
-    if (initializer?.kind === SyntaxKind.FalseKeyword) {
-        return false;
-    }
+    switch (initializer?.kind) {
+        case SyntaxKind.FalseKeyword:
+            return false;
 
-    if (initializer?.kind === SyntaxKind.TrueKeyword) {
-        return true;
-    }
+        case SyntaxKind.TrueKeyword:
+            return true;
 
-    if (initializer?.kind === SyntaxKind.StringLiteral && !initializer?.text) {
-        return '';
-    }
+        case SyntaxKind.PropertyAccessExpression:
+            return initializer.expression?.escapedText;
 
-    if (initializer?.kind === SyntaxKind.PropertyAccessExpression) {
-        return initializer.expression?.escapedText;
-    }
+        case SyntaxKind.NumericLiteral:
+            return Number(initializer.text);
 
-    if (initializer?.kind === SyntaxKind.NumericLiteral) {
-        return Number(initializer.text);
+        case SyntaxKind.StringLiteral:
+            return initializer.text || '';
+
+        case SyntaxKind.ObjectLiteralExpression:
+            return initializer.properties.reduce(
+                (obj, item) => {
+                    obj[item.name.escapedText] = parseObjectValue(project, file, item.initializer);
+                    return obj;
+                },
+                {},
+            );
+
+        default:
+            break;
     }
 
     // Пока что inverseSide получается как строка, нужно подумать, как с ней работать в дальнейшем
@@ -63,14 +85,26 @@ export function parseObjectValue(project: IGiiProject, file: IGiiFile, initializ
         return initializer.text;
     }
 
-    return initializer;
+    throw new Error('Cannot parse object value (kind ' + initializer.kind + '): ' + JSON.stringify(initializer));
 }
 
 export function generateObjectValue(project: IGiiProject, optionName: string, fieldValue: any): IGeneratedCode {
+    let code;
+    if (fieldValue instanceof ObjectValueExpression
+        || (typeof fieldValue === 'object' && _has(fieldValue, '__valueExpression'))) {
+        code = fieldValue.__valueExpression || fieldValue.value;
+    } else if (typeof fieldValue === 'string') {
+        code = "'" + fieldValue + "'";
+    } else if (fieldValue && typeof fieldValue === 'object') {
+        code = JSON.stringify(fieldValue, null, tab(2))
+            .replace(/"([a-z0-9_]+)":/gi, '$1:')
+            .replace(/"/g, "'"); // TODO generate object as js code (not json with quotes)
+    } else {
+        code = String(fieldValue);
+    }
+
     return [
-        typeof fieldValue === 'string'
-            ? fieldValue
-            : String(fieldValue),
+        code,
         [],
     ];
 }

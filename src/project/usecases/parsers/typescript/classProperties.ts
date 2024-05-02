@@ -1,8 +1,7 @@
 import {SyntaxKind} from 'typescript';
-import e from 'express';
 import {IGiiFile} from '../file';
 import {IGiiProject} from '../project';
-import {IGiiTsClassDecorator, parseDecorator} from './decorators';
+import {IGiiTsClassDecorator, parseDecorators} from './decorators';
 
 export interface IGiiTsClassProperty {
     name: string,
@@ -12,23 +11,21 @@ export interface IGiiTsClassProperty {
     decorators: IGiiTsClassDecorator[],
 }
 
-// возможно есть решение лучше, чем так перебирать типы, тогда можно его здесь применить
-const getTypeNameByKind = (kind: number) => {
-    switch (kind) {
-        case SyntaxKind.StringKeyword:
-            return 'string';
-        case SyntaxKind.NumberKeyword:
-            return 'number';
-        case SyntaxKind.BooleanKeyword:
-            return 'boolean';
-        case SyntaxKind.AnyKeyword:
-            return 'any';
-        case SyntaxKind.UnknownKeyword:
-            return 'unknown';
-        case SyntaxKind.ObjectKeyword:
-            return 'object';
+const getTypeNameByKind = (tsType: any) => {
+    switch (tsType.kind) {
+        case SyntaxKind.ArrayType:
+            return getTypeNameByKind(tsType.elementType);
+
+        case SyntaxKind.TypeReference:
+            return tsType.typeName.escapedText;
+
         default:
-            return null;
+            return {
+                [SyntaxKind.StringKeyword]: 'string',
+                [SyntaxKind.NumberKeyword]: 'number',
+                [SyntaxKind.BooleanKeyword]: 'boolean',
+                [SyntaxKind.ObjectKeyword]: 'object',
+            }[tsType.kind] || 'any';
     }
 };
 
@@ -36,13 +33,13 @@ export const parseClassProperty = (project: IGiiProject, file: IGiiFile, tsMembe
     const decorators = tsMember.decorators || tsMember.modifiers || [];
 
     const isArray = tsMember.type.kind === SyntaxKind.ArrayType;
-    const jsType = getTypeNameByKind(isArray ? tsMember.type.elementType.kind : tsMember.type.kind);
+    const jsType = getTypeNameByKind(tsMember.type);
 
     return {
         name: tsMember.name.escapedText,
         oldName: tsMember.name.escapedText,
         jsType,
         isArray,
-        decorators: decorators.map(decorator => parseDecorator(project, file, decorator)),
+        decorators: parseDecorators(project, file, decorators),
     };
 };

@@ -17,9 +17,9 @@ export interface IGiiTsImport {
 const isProjectFile = (
     project: IGiiProject,
     path: string,
-) => ['/', '.'].includes(path.substring(0, 1))
+) => !path.startsWith('node_modules') && (['/', '.'].includes(path.substring(0, 1))
     || path.startsWith(project.path)
-    || fs.existsSync(join(project.path, path));
+    || fs.existsSync(join(project.path, path)));
 const sortImports = (
     project: IGiiProject,
     items: IGiiTsImport[],
@@ -156,8 +156,11 @@ export function generateImports(project: IGiiProject, file: IGiiFile, items: IGi
                 if (fs.existsSync(join(project.path, item.from))) {
                     from = join(project.path, item.from);
                 }
-                from = relative(dirname(file.path), from).replace(/\.(ts|js)$/, '');
+                from = relative(dirname(file.path), from);
+            } else if (item.from.startsWith(join('node_modules', '/'))) {
+                from = from.substring(join('node_modules', '/').length);
             }
+            from = from.replace(/\.(ts|js)$/, '');
 
             return `import ${names} from '${from}';`;
         })

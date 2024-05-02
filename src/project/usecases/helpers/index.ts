@@ -1,8 +1,11 @@
 import * as ts from 'typescript';
 import * as path from 'path';
-import {ScriptTarget} from 'typescript';
+import {ScriptTarget, SyntaxKind} from 'typescript';
 import {IGiiFile} from '../parsers/file';
 import {IGiiImport} from '../parsers/imports';
+import {IGiiProject} from '../parsers/project';
+import {generateObjectValue} from '../parsers/typescript/objectValue';
+import {IGiiTsConstant} from '../parsers/typescript/constants';
 
 export type IGeneratedCode = [string, IGiiImport[]];
 
@@ -50,7 +53,68 @@ export function updateFileContent(fileContent, fragmentsToUpdate: IFragmentToUpd
             end + sizeOffset,
             fragmentToUpdate.replacement,
         );
-        sizeOffset += (fragmentToUpdate.replacement.length - (end - start - 1));
+        sizeOffset += (fragmentToUpdate.replacement.length - (end - start));
     }
     return fileContent;
 }
+
+export const generateItemsByConfig = (
+    nodes,
+    dataList,
+    config: {
+        endPos: number,
+        selectNameByNode: (node) => string,
+        nameKey: string,
+        oldNameKey: string,
+    },
+): IGeneratedCode => {
+    config = {
+        endPos: 0,
+        nameKey: 'name',
+        oldNameKey: 'oldName',
+        ...config,
+    };
+
+    const imports = [];
+    const fragments = [];
+
+    // Удаляем старые поля
+    const oldNames = dataList.map(data => data[config.oldNameKey]);
+    fragments.push(
+        ...nodes
+            .filter(item => !oldNames.includes(config.selectNameByNode(item)))
+            .map(item => ({
+                start: item.pos,
+                end: item.end,
+                replacement: '',
+            })),
+    );
+
+    // Обновляем существующие поля
+    for (const data of dataList) {
+        const node = nodes.find(node => data[config.oldNameKey] === config.selectNameByNode(node));
+        const oldConstant = node ? parseConstant(project, file, node) : null;
+
+        if (!oldConstant || !_isEqual(oldConstant, data)) {
+            const [valueCode, valueImports] = generateObjectValue(project, data.name, data.value);
+
+            imports.push(...valueImports);
+            fragments.push({
+                start: node ? node.pos : endPos,
+                end: node ? node.end : endPos,
+                replacement: '\n' + [
+                    data.isExport && 'export',
+                    data.type,
+                    data.name,
+                    '=',
+                    valueCode + ';',
+                ].filter(Boolean).join(' '),
+            });
+        }
+    }
+
+    return [
+        updateFileContent(file.code, fragments),
+        imports,
+    ];
+};

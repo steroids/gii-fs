@@ -4,6 +4,7 @@ export const mockFile: IGiiFile = {
     id: 'src/auth/domain/dtos/AuthConfirmLoginDto.ts',
     path: '/Users/kuzy/KozhinDev/solyanka/backend-api/src/auth/domain/dtos/AuthConfirmLoginDto.ts',
     name: 'AuthConfirmLoginDto',
+    ext: 'ts',
     code: "import {StringField} from '@steroidsjs/nest/infrastructure/decorators/fields';\n"
       + '\n'
       + 'export const testConst1 = false; \n'

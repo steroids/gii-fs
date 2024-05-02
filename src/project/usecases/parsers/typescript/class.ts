@@ -2,7 +2,7 @@ import {SyntaxKind} from 'typescript';
 import {createAst} from '../../helpers';
 import {IGiiProject} from '../project';
 import {IGiiFile} from '../file';
-import {IGiiTsClassDecorator, parseDecorator} from './decorators';
+import {IGiiTsClassDecorator, parseDecorators} from './decorators';
 import {IGiiTsClassProperty, parseClassProperty} from './classProperties';
 
 interface IGiiTsClassMethod {
@@ -56,7 +56,7 @@ export const parseClass = (project: IGiiProject, file: IGiiFile): IGiiTsClass =>
         .find(item => item.kind === SyntaxKind.ClassDeclaration);
 
     const name = node.name?.escapedText;
-    const decorators = node.modifiers.map(modifier => parseDecorator(project, file, modifier)).filter(Boolean);
+    const decorators = parseDecorators(project, file, node.modifiers);
     const properties = node.members.map(member => parseClassProperty(project, file, member));
 
     return {
