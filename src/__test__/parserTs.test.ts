@@ -58,7 +58,6 @@ describe('parseTs test', () => {
                         }],
                     },
                 ],
-                methods: [],
                 properties: [
                     {
                         name: 'uid',
@@ -99,8 +98,15 @@ describe('parseTs test', () => {
                     {
                         name: 'newProperty',
                         oldName: 'newProperty',
-                        jsType: 'number',
+                        jsType: 'number[]',
                         isArray: true,
+                        decorators: [],
+                    },
+                    {
+                        name: 'extendField',
+                        oldName: 'extendField',
+                        jsType: 'src/auth/enums/AuthRolesEnum.ts',
+                        isArray: false,
                         decorators: [],
                     },
                 ],

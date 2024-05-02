@@ -9,8 +9,8 @@ import {PARSER_MODULE} from './module';
 export interface IGiiStructureItem {
     id: string,
     name: string,
-    type: 'enum' | 'model' | 'dto' | string,
-    createType: 'enum' | 'model' | 'dto' | string,
+    type?: 'enum' | 'model' | 'dto' | string,
+    createType?: 'enum' | 'model' | 'dto' | string,
     items?: IGiiStructureItem[],
 }
 

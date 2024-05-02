@@ -31,5 +31,7 @@ export const mockFile: IGiiFile = {
       + '    code: string;\n'
       + '\n'
       + '    newProperty: number[];\n'
+      + '\n'
+      + '    extendField: AuthRolesEnum;\n'
       + '}\n',
 };

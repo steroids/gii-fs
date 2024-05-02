@@ -21,11 +21,16 @@ interface IGiiTsClassMethod {
     },
 }
 
+interface IDescriptionTag {
+    name: string,
+    value: string,
+}
+
 export interface IGiiTsClass {
     name: string,
     oldName: string,
     description?: string,
-    descriptionTags?: Record<string, string>[],
+    descriptionTags?: IDescriptionTag[],
     decorators?: IGiiTsClassDecorator[],
     methods?: IGiiTsClassMethod[],
     properties?: IGiiTsClassProperty[],
@@ -40,7 +45,7 @@ const getJsDocDescriptionTags = (node: any) => node?.jsDoc.reduce(
     (acc, jsDocItem) => {
         const tags = jsDocItem.tags.map(tag => ({
             name: tag.tagName.escapedText,
-            value: tag.comment,
+            value: tag.comment.trim(),
         }));
 
         return [
