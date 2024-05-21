@@ -3,7 +3,7 @@ import * as path from 'path';
 import {IGiiFile} from '../file';
 import {IGiiProject} from '../project';
 import {generateConstants, IGiiTsConstant, parseConstants} from './constants';
-import {IGeneratedCode} from '../../helpers';
+import {updateFileContent} from '../../helpers';
 
 export const project: IGiiProject = {
     name: 'test',
@@ -11,11 +11,16 @@ export const project: IGiiProject = {
     structure: [],
 };
 
-const file: IGiiFile = {
+const emptyFile: IGiiFile = {
     id: 'src/project/usecases/parsers/typescript/test.ts',
     path: path.join(process.cwd(), '/src/project/usecases/parsers/typescript/test.ts'),
     name: 'test',
     ext: 'ts',
+    code: '',
+};
+
+const file: IGiiFile = {
+    ...emptyFile,
     code: `
 export let testConst1 = false;
 export const testConst2 = 123;
@@ -51,63 +56,61 @@ describe('constants test', () => {
     });
 
     it('generate del all', () => {
-        expect(generateConstants(project, file, []))
-            .toEqual([
-                '\n    ',
-                [],
-            ] as IGeneratedCode);
+        expect(updateFileContent(
+            file.code,
+            generateConstants(project, file, [])[0],
+        ))
+            .toEqual('\n    ');
     });
 
     it('generate upd', () => {
         expect(
-            generateConstants(
-                project,
-                file,
-                [
-                    {
-                        name: 'testConst1',
-                        oldName: 'testConst1',
-                        value: false,
-                        type: 'const',
-                        isExport: true,
-                    },
-                    {
-                        name: 'testConst2',
-                        oldName: 'testNEWNEWConst1',
-                        value: 123,
-                        type: 'let',
-                        isExport: true,
-                    },
-                    {
-                        name: 'testConst5',
-                        oldName: 'testConst5',
-                        value: 'asd',
-                        type: 'let',
-                        isExport: true,
-                    },
-                ],
+            updateFileContent(
+                emptyFile.code,
+                generateConstants(
+                    project,
+                    emptyFile,
+                    [
+                        {
+                            name: 'testConst1',
+                            oldName: 'testConst1',
+                            value: false,
+                            type: 'const',
+                            isExport: true,
+                        },
+                        {
+                            name: 'testConst2',
+                            oldName: 'testNEWNEWConst1',
+                            value: 123,
+                            type: 'let',
+                            isExport: true,
+                        },
+                        {
+                            name: 'testConst5',
+                            oldName: 'testConst5',
+                            value: 'asd',
+                            type: 'let',
+                            isExport: true,
+                        },
+                    ],
+                )[0],
             ),
-        ).toEqual([
-            "\nexport const testConst1 = false;\nexport let testConst2 = 123;\nexport let testConst5 = 'asd';\n    ",
-            [],
-        ] as IGeneratedCode);
+        ).toEqual(`export const testConst1 = false;
+export let testConst2 = 123;
+export let testConst5 = 'asd';`);
     });
 
     it('generate from empty', () => {
         const constants = parseConstants(project, file);
-        const emptyFile = {
-            ...file,
-            code: '\n    ',
-        };
         expect(
-            generateConstants(
-                project,
-                emptyFile,
-                constants,
+            updateFileContent(
+                emptyFile.code,
+                generateConstants(
+                    project,
+                    emptyFile,
+                    constants,
+                )[0],
             ),
-        ).toEqual([
-            file.code,
-            [],
-        ] as IGeneratedCode);
+        ).toEqual(file.code.trim());
     });
 });

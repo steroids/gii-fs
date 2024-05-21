@@ -1,8 +1,8 @@
 import {SyntaxKind} from 'typescript';
 import {isEqual as _isEqual} from 'lodash';
-import {IGiiFile} from './file';
-import {createAst, tab, updateFileContent} from '../helpers';
-import {IGiiProject} from './project';
+import {IGiiFile} from '../file';
+import {createAst, tab, updateFileContent} from '../../helpers';
+import {IGiiProject} from '../project';
 
 export interface IGiiPermission {
     id: string,
@@ -15,7 +15,7 @@ export interface IGiiPermissions {
     permissions?: IGiiPermission[],
 }
 
-export const PARSER_PERMISSIONS = 'permissions';
+export const PARSER_NEST_PERMISSIONS = 'permissions';
 
 export function parsePermissions(project: IGiiProject, file: IGiiFile): IGiiPermissions {
     const ast: any = file.code ? createAst(file) : [];
@@ -109,7 +109,7 @@ export function generatePermissions(project: IGiiProject, file: IGiiFile, data: 
         file.code = updateFileContent(file.code, {
             start: exportNode.pos,
             end: exportNode.end,
-            replacement: '\n\nexport default [\n' + renderObject(data.permissions) + '\n];',
+            replacement: '\n\nexport default [\n' + renderObject(data.permissions) + '\n];\n',
         });
         updateAst();
     }

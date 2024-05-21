@@ -1,6 +1,6 @@
 import {
-    CreateTimeField,
     PrimaryKeyField,
+    CreateTimeField,
     UpdateTimeField,
 } from '@steroidsjs/nest/infrastructure/decorators/fields';
 

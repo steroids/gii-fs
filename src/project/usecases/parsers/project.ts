@@ -1,17 +1,17 @@
 import * as globToRegexp from 'glob-to-regexp';
 import * as fs from 'fs';
 import * as path from 'path';
-import {PARSER_MODEL} from './model';
-import {PARSER_ENUM} from './enum';
-import {PARSER_DTO} from './dto';
-import {PARSER_MODULE} from './module';
-import {PARSER_PERMISSIONS} from './permissions';
+import {PARSER_NEST_MODEL} from './nest/model';
+import {PARSER_NEST_ENUM} from './nest/enum';
+import {PARSER_NEST_DTO} from './nest/dto';
+import {PARSER_NEST_MODULE} from './nest/module';
+import {PARSER_NEST_PERMISSIONS} from './nest/permissions';
 
 export interface IGiiStructureItem {
     id: string,
     name: string,
     type: 'enum' | 'model' | 'dto' | string,
-    createType: 'enum' | 'model' | 'dto' | string,
+    createType?: 'enum' | 'model' | 'dto' | string,
     items?: IGiiStructureItem[],
 }
 
@@ -30,42 +30,42 @@ export interface IGiiProject {
 
 const STRUCTURE_NEST_BACKEND = {
     dir: 'src',
-    createType: PARSER_MODULE,
+    createType: PARSER_NEST_MODULE,
     items: [
         {
             pattern: /^[a-z0-9-_]+$/i,
-            type: PARSER_MODULE,
+            type: PARSER_NEST_MODULE,
             items: [
                 {
                     dir: 'domain',
                     items: [
                         {
                             dir: 'models',
-                            createType: PARSER_MODEL,
+                            createType: PARSER_NEST_MODEL,
                             items: [
                                 {
                                     pattern: '*Model.ts',
-                                    type: PARSER_MODEL,
+                                    type: PARSER_NEST_MODEL,
                                 },
                             ],
                         },
                         {
                             dir: 'enums',
-                            createType: PARSER_ENUM,
+                            createType: PARSER_NEST_ENUM,
                             items: [
                                 {
                                     pattern: '*Enum.ts',
-                                    type: PARSER_ENUM,
+                                    type: PARSER_NEST_ENUM,
                                 },
                             ],
                         },
                         {
                             dir: 'dtos',
-                            createType: PARSER_DTO,
+                            createType: PARSER_NEST_DTO,
                             items: [
                                 {
                                     pattern: '*.ts',
-                                    type: PARSER_DTO,
+                                    type: PARSER_NEST_DTO,
                                 },
                             ],
                         },
@@ -76,11 +76,11 @@ const STRUCTURE_NEST_BACKEND = {
                     items: [
                         {
                             dir: 'dtos',
-                            createType: PARSER_DTO,
+                            createType: PARSER_NEST_DTO,
                             items: [
                                 {
                                     pattern: '*.ts',
-                                    type: PARSER_DTO,
+                                    type: PARSER_NEST_DTO,
                                 },
                             ],
                         },
@@ -101,7 +101,7 @@ const STRUCTURE_NEST_BACKEND = {
                         },
                         {
                             pattern: 'permissions.ts',
-                            type: PARSER_PERMISSIONS,
+                            type: PARSER_NEST_PERMISSIONS,
                         },
                     ],
                 },

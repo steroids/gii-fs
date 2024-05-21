@@ -69,15 +69,12 @@ describe('object value test', () => {
                     two: 2,
                     five: 555,
                 },
-            ),
+            )[0],
         )
-            .toEqual([
-                '{\n'
-                + '        one: 1,\n'
-                + '        two: 2,\n'
-                + '        five: 555\n'
-                + '}',
-                [],
-            ]);
+            .toEqual(`{
+    one: 1,
+    two: 2,
+    five: 555,
+}`);
     });
 });

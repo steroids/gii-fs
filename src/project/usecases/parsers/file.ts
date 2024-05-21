@@ -17,7 +17,7 @@ export function getGiiItemFromAbsolutePath(projectPath: string, absolutePath: st
     absolutePath = normalize(absolutePath);
 
     if (!absolutePath.startsWith(projectPath)) {
-        throw new Error('Wrong file, not in project: ' + absolutePath);
+        throw new Error('Wrong file, not in project: ' + absolutePath + '. Project path: ' + projectPath);
     }
 
     const id = absolutePath.substring(path.join(projectPath, '/').length);

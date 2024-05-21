@@ -1,4 +1,3 @@
-import {isEqual as _isEqual} from 'lodash';
 import {IGiiFile} from '../file';
 import {IGiiTsImport, parseImports} from './imports';
 import {IGiiProject} from '../project';

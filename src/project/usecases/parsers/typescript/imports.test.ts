@@ -20,11 +20,10 @@ const file: IGiiFile = {
 
 describe('imports test', () => {
     it('parse', () => {
-        expect(parseImports(file)).toEqual([{
+        expect(parseImports(project, file)).toEqual([{
             names: ['StringField'],
             default: null,
-            path: path.join(process.cwd(), '/node_modules/@steroidsjs/nest/infrastructure/decorators/fields/index.js'),
-            from: '@steroidsjs/nest/infrastructure/decorators/fields',
+            giiId: 'node_modules/@steroidsjs/nest/infrastructure/decorators/fields/index.js',
         }] as IGiiTsImport[]);
     });
 
@@ -34,6 +33,6 @@ describe('imports test', () => {
         ];
 
         expect(generateImports(project, file, items))
-            .toEqual("import {StringField} from '@steroidsjs/nest/infrastructure/decorators/fields/index';");
+            .toEqual("import {StringField} from '@steroidsjs/nest/infrastructure/decorators/fields';");
     });
 });

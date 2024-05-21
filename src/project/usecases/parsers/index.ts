@@ -1,15 +1,15 @@
-import {generateModel, parseModel, PARSER_MODEL} from './model';
-import {generateDto, parseDto, PARSER_DTO} from './dto';
-import {generateEnum, parseEnum, PARSER_ENUM} from './enum';
-import {generatePermissions, parsePermissions, PARSER_PERMISSIONS} from './permissions';
+import {generateModel, parseModel, PARSER_NEST_MODEL} from './nest/model';
+import {generateDto, parseDto, PARSER_NEST_DTO} from './nest/dto';
+import {generateEnum, parseEnum, PARSER_NEST_ENUM} from './nest/enum';
+import {generatePermissions, parsePermissions, PARSER_NEST_PERMISSIONS} from './nest/permissions';
 import {IGiiFile} from './file';
 import {IGiiProject} from './project';
 
 const parsers = {
-    [PARSER_MODEL]: [parseModel, generateModel],
-    [PARSER_DTO]: [parseDto, generateDto],
-    [PARSER_ENUM]: [parseEnum, generateEnum],
-    [PARSER_PERMISSIONS]: [parsePermissions, generatePermissions],
+    [PARSER_NEST_MODEL]: [parseModel, generateModel],
+    [PARSER_NEST_DTO]: [parseDto, generateDto],
+    [PARSER_NEST_ENUM]: [parseEnum, generateEnum],
+    [PARSER_NEST_PERMISSIONS]: [parsePermissions, generatePermissions],
 };
 
 export const parse = (project: IGiiProject, type: string, file: IGiiFile) => {
